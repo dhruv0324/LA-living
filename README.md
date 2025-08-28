@@ -442,7 +442,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Documentation**: Check this README and API docs first
 - **Issues**: Create a GitHub issue for bugs or feature requests
 - **Discussions**: Use GitHub Discussions for questions and ideas
-- **Email**: [your-email@example.com] (Optional)
 
 ---
 
