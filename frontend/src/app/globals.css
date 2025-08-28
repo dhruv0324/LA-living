@@ -1,6 +1,5 @@
 /* Import statements must come first */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import "tailwindcss";
 
 /* Dark theme global styles */
 :root {
