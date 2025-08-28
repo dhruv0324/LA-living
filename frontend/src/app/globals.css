@@ -1,0 +1,129 @@
+/* Import statements must come first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* Dark theme global styles */
+:root {
+  --primary-teal: #14B8A6;
+  --primary-teal-light: #2DD4BF;
+  --primary-teal-dark: #0F766E;
+  --secondary-slate: #1F2937;
+  --background-dark: #111827;
+  --background-paper: #1F2937;
+  --background-elevated: #374151;
+  --text-primary: #F9FAFB;
+  --text-secondary: #9CA3AF;
+  --success-green: #22C55E;
+  --error-red: #F87171;
+  --warning-amber: #FBBF24;
+  --border-color: #374151;
+  --hover-color: #4B5563;
+  
+  /* Legacy variables for compatibility */
+  --background: #111827;
+  --foreground: #F9FAFB;
+}
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-paper);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hover-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Selection styling */
+::selection {
+  background-color: var(--primary-teal);
+  color: white;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--primary-teal);
+  outline-offset: 2px;
+}
+
+/* Custom utility classes */
+.text-income {
+  color: var(--success-green) !important;
+}
+
+.text-expense {
+  color: var(--error-red) !important;
+}
+
+.text-warning {
+  color: var(--warning-amber) !important;
+}
+
+.bg-income {
+  background-color: var(--success-green) !important;
+}
+
+.bg-expense {
+  background-color: var(--error-red) !important;
+}
+
+.bg-warning {
+  background-color: var(--warning-amber) !important;
+}
+
+/* Smooth transitions */
+.smooth-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+}

@@ -1,0 +1,14 @@
+# Supabase Configuration Template
+# Create a .env.local file in the frontend directory and add these variables:
+
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Instructions:
+# 1. Go to your Supabase dashboard (https://supabase.com/dashboard)
+# 2. Create a new project or select an existing one
+# 3. Go to Settings > API
+# 4. Copy the Project URL and paste it as NEXT_PUBLIC_SUPABASE_URL
+# 5. Copy the anon public key and paste it as NEXT_PUBLIC_SUPABASE_ANON_KEY
+# 6. Create a .env.local file in the frontend directory
+# 7. Add these variables to your .env.local file 
