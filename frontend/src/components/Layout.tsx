@@ -41,11 +41,21 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const router = useRouter();
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+
+  // Cleanup effect to reset logout state if component unmounts
+  React.useEffect(() => {
+    return () => {
+      if (isLoggingOut) {
+        setIsLoggingOut(false);
+      }
+    };
+  }, [isLoggingOut]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -70,8 +80,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    router.push('/landing');
+    // Prevent multiple rapid clicks
+    if (isLoggingOut) {
+      console.log('Layout: Logout already in progress, ignoring click');
+      return;
+    }
+
+    console.log('Layout: Logout button clicked, starting logout process...');
+    setIsLoggingOut(true);
+    
+    try {
+      await signOut();
+      console.log('Layout: signOut completed, waiting for state to clear...');
+      
+      // Small delay to ensure auth state is properly cleared
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('Layout: Redirecting to landing page...');
+      router.push('/landing');
+    } catch (error) {
+      console.error('Layout: Error during logout:', error);
+      setIsLoggingOut(false); // Reset on error
+    }
   };
 
   const drawer = (
@@ -144,6 +174,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           variant="outlined"
           startIcon={<LogoutIcon />}
           onClick={handleLogout}
+          disabled={isLoggingOut}
           sx={{
             borderColor: 'primary.main',
             color: 'primary.main',
@@ -151,9 +182,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               borderColor: 'primary.light',
               backgroundColor: 'rgba(20, 184, 166, 0.1)',
             },
+            '&:disabled': {
+              opacity: 0.6,
+              cursor: 'not-allowed',
+            },
           }}
         >
-          Sign Out
+          {isLoggingOut ? 'Signing Out...' : 'Sign Out'}
         </Button>
       </Box>
       
@@ -323,4 +358,4 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 };
 
-export default Layout; 
+export default Layout;

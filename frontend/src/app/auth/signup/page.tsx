@@ -126,7 +126,7 @@ export default function SignupPage() {
       if (signUpError) {
         setError(signUpError.message);
       } else {
-        setSuccess('Account created successfully! You can now sign in with your credentials.');
+        setSuccess('Account created successfully! You will be redirected to the login page in 2 seconds, or you can click "Sign in" below to go there immediately.');
         // Clear form
         setFormData({
           name: '',
@@ -135,9 +135,9 @@ export default function SignupPage() {
           password: '',
         });
         
-        // Redirect to dashboard after a short delay
+        // Redirect to login page after a short delay
         setTimeout(() => {
-          router.push('/');
+          router.push('/auth/login');
         }, 2000);
       }
     } catch (err) {

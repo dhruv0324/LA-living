@@ -27,7 +27,7 @@ import { useRouter } from 'next/navigation';
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    emailOrUsername: '',
+    email: '',
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -49,8 +49,12 @@ export default function LoginPage() {
   };
 
   const validateForm = () => {
-    if (!formData.emailOrUsername.trim()) {
-      setError('Email or username is required');
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('Please enter a valid email address');
       return false;
     }
     if (!formData.password) {
@@ -69,26 +73,17 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Check if input is email or username
-      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.emailOrUsername);
-      
-      if (isEmail) {
-        // Sign in with email
-        const { data, error: signInError } = await authHelpers.signInWithEmail(
-          formData.emailOrUsername,
-          formData.password
-        );
+      // Sign in with email
+      const { data, error: signInError } = await authHelpers.signInWithEmail(
+        formData.email,
+        formData.password
+      );
 
-        if (signInError) {
-          setError(signInError.message);
-        } else {
-          // Redirect to dashboard
-          router.push('/');
-        }
+      if (signInError) {
+        setError(signInError.message);
       } else {
-        // For username login, we'd need to query the user table first
-        // For now, show an error asking for email
-        setError('Please use your email address to sign in. Username login requires additional setup.');
+        // Redirect to dashboard
+        router.push('/');
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -184,7 +179,7 @@ export default function LoginPage() {
                 color: 'text.secondary',
               }}
             >
-              Sign in to continue managing your finances
+              Sign in with your email to continue managing your finances
             </Typography>
           </Box>
 
@@ -199,9 +194,9 @@ export default function LoginPage() {
 
               <TextField
                 fullWidth
-                name="emailOrUsername"
-                label="Email Address or Username"
-                value={formData.emailOrUsername}
+                name="email"
+                label="Email Address"
+                value={formData.email}
                 onChange={handleInputChange}
                 margin="normal"
                 required
@@ -267,7 +262,11 @@ export default function LoginPage() {
                 <Link
                   component="button"
                   type="button"
-                  onClick={() => setShowForgotPassword(true)}
+                  onClick={() => {
+                    setShowForgotPassword(true);
+                    // Pre-fill the forgot password email with the login email
+                    setForgotPasswordEmail(formData.email);
+                  }}
                   sx={{
                     color: 'primary.main',
                     textDecoration: 'none',
