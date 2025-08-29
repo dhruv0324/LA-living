@@ -18,8 +18,6 @@ dist/
 # Development files
 .git/
 .gitignore
-README.md
-*.log
 
 # IDE files
 .vscode/
@@ -38,4 +36,8 @@ __tests__/
 
 # Documentation
 docs/
-*.md
+README.md
+AUTH_SETUP.md
+supabase-env-template.txt
+vercel-env-template.txt
+render-env-template.txt
