@@ -5,16 +5,25 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 import asyncio
 from functools import wraps
+import logging
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (only in development)
+if os.getenv("RENDER") is None:
+    load_dotenv()
 
-# Supabase connection detailsSUPABASE_URL = os.getenv("SUPABASE_URL")
+# Configure logging for production
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Supabase connection details
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://mzclzcgzfpbghlbuiolk.supabase.co")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 if not SUPABASE_ANON_KEY:
+    logger.error("SUPABASE_ANON_KEY environment variable is required")
     raise ValueError("SUPABASE_ANON_KEY environment variable is required")
+
+logger.info(f"Connecting to Supabase at: {SUPABASE_URL}")
 
 class Database:
     def __init__(self):

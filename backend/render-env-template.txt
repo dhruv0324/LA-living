@@ -1,0 +1,14 @@
+# Render Environment Variables Template
+# Copy these variables to your Render service dashboard
+
+# Supabase Configuration
+SUPABASE_URL=https://mzclzcgzfpbghlbuiolk.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Render will automatically provide:
+# PORT=random_port_number
+# RENDER=true
+
+# Optional: Add any additional environment variables your app needs
+# DATABASE_URL=your_database_url_here
+# JWT_SECRET=your_jwt_secret_here

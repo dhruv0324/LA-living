@@ -4,10 +4,15 @@ from routes import users, accounts, expenses, budgets, loans, loan_disbursements
 
 app = FastAPI(title="Expense Tracker API", version="1.0.0")
 
-# CORS middleware
+# CORS middleware - Updated for production deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js frontend
+    allow_origins=[
+        "http://localhost:3000",  # Local development
+        "https://*.vercel.app",   # Vercel preview deployments
+        "https://*.vercel.app",   # Vercel production
+        "https://us-living.vercel.app",  # Your main domain (update this)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
