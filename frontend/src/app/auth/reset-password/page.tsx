@@ -18,7 +18,7 @@ import {
   VisibilityOff,
   Lock,
 } from '@mui/icons-material';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 function ResetPasswordContent() {

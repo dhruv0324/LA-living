@@ -21,7 +21,7 @@ import {
   Email,
   AccountCircle,
 } from '@mui/icons-material';
-import { authHelpers } from '../../../lib/supabase';
+import { authHelpers } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {

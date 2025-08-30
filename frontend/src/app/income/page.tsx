@@ -44,12 +44,13 @@ import {
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 
-import Layout from '../../components/Layout';
-import TagSelector from '../../components/TagSelector';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
-import { incomeApi, Income, accountApi, Account, Tag } from '../../lib/api';
+import Layout from '@/components/Layout';
+import TagSelector from '@/components/TagSelector';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import { incomeApi, Income, accountApi, Account, Tag } from '@/lib/api';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
+import EmptyState from '@/components/EmptyState';
 
 const formatCurrency = (amount: string | number): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase, authHelpers } from '../lib/supabase';
+import { supabase, authHelpers } from '@/lib/supabase';
 
 interface AuthUser {
   id: string;

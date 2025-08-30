@@ -54,8 +54,9 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-import Layout from '../components/Layout';
-import TagSelector from '../components/TagSelector';
+import Layout from '@/components/Layout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import TagSelector from '@/components/TagSelector';
 import { 
   expenseApi, 
   incomeApi, 
@@ -72,7 +73,7 @@ import {
   Debt,
   Person,
   Tag
-} from '../lib/api';
+} from '@/lib/api';
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 

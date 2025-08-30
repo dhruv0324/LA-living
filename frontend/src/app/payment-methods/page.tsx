@@ -36,11 +36,11 @@ import {
   SwapHoriz as TransferIcon,
   AccountBalance,
 } from '@mui/icons-material';
-import Layout from '../../components/Layout';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
-import { accountApi, Account } from '../../lib/api';
-import EmptyState from '../../components/EmptyState';
+import Layout from '@/components/Layout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import { accountApi, Account } from '@/lib/api';
+import EmptyState from '@/components/EmptyState';
 
 const PaymentMethodsPage = () => {
   const { user } = useAuth();

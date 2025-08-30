@@ -55,13 +55,13 @@ import {
   Home as HomeIcon,
 } from '@mui/icons-material';
 
-import Layout from '../../components/Layout';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
-import TagSelector from '../../components/TagSelector';
-import { loanApi, loanDisbursementApi, accountApi, Loan, LoanDisbursement, Account, Tag } from '../../lib/api';
+import Layout from '@/components/Layout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import TagSelector from '@/components/TagSelector';
+import { loanApi, loanDisbursementApi, accountApi, Loan, LoanDisbursement, Account, Tag } from '@/lib/api';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
-import EmptyState from '../../components/EmptyState';
+import EmptyState from '@/components/EmptyState';
 
 const formatCurrency = (amount: string | number): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;

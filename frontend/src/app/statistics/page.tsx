@@ -51,9 +51,9 @@ import {
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 
-import Layout from '../../components/Layout';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
+import Layout from '@/components/Layout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   expenseApi, 
   incomeApi, 
@@ -69,9 +69,9 @@ import {
   Loan,
   Debt,
   Tag
-} from '../../lib/api';
+} from '@/lib/api';
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, startOfYear, endOfYear } from 'date-fns';
-import EmptyState from '../../components/EmptyState';
+import EmptyState from '@/components/EmptyState';
 
 // Register Chart.js components
 ChartJS.register(

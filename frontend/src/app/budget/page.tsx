@@ -38,9 +38,9 @@ import {
   Assessment as BudgetIcon,
 } from '@mui/icons-material';
 
-import Layout from '../../components/Layout';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
+import Layout from '@/components/Layout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   budgetApi, 
   Budget, 
@@ -50,8 +50,9 @@ import {
   Account,
   loanApi,
   Loan
-} from '../../lib/api';
+} from '@/lib/api';
 import { format } from 'date-fns';
+import EmptyState from '@/components/EmptyState';
 
 const BudgetPage = () => {
   const { user } = useAuth();

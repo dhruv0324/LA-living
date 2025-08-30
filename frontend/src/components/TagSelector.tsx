@@ -15,7 +15,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import { tagApi, Tag } from '../lib/api';
+import { tagApi, Tag } from '@/lib/api';
 
 interface TagSelectorProps {
   userId: string;

@@ -44,12 +44,12 @@ import {
   ChevronRight,
 } from '@mui/icons-material';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, startOfWeek, endOfWeek, isSameMonth } from 'date-fns';
-import { expenseApi, accountApi, budgetApi, Expense, Account, BudgetSummary, Tag } from '../../lib/api';
-import Layout from '../../components/Layout';
-import TagSelector from '../../components/TagSelector';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
-
+import { expenseApi, accountApi, budgetApi, Expense, Account, BudgetSummary, Tag } from '@/lib/api';
+import Layout from '@/components/Layout';
+import TagSelector from '@/components/TagSelector';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import EmptyState from '@/components/EmptyState';
 
 
 interface TabPanelProps {

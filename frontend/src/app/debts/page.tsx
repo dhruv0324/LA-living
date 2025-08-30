@@ -47,10 +47,10 @@ import {
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 
-import Layout from '../../components/Layout';
-import TagSelector from '../../components/TagSelector';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
+import Layout from '@/components/Layout';
+import TagSelector from '@/components/TagSelector';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   peopleApi, 
   Person, 
@@ -59,8 +59,8 @@ import {
   accountApi, 
   Account, 
   Tag 
-} from '../../lib/api';
-import EmptyState from '../../components/EmptyState';
+} from '@/lib/api';
+import EmptyState from '@/components/EmptyState';
 
 const formatCurrency = (amount: string | number): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
