@@ -69,4 +69,14 @@ async def cors_debug():
             "https://*.onrender.com"
         ],
         "note": "Check Render logs to see if CORS origins are being logged on startup"
+    }
+
+@app.get("/test")
+async def test_endpoint():
+    """Simple test endpoint to verify connectivity"""
+    return {
+        "message": "Backend is working!",
+        "timestamp": "2025-08-30T17:30:00Z",
+        "status": "healthy",
+        "cors_working": True
     } 

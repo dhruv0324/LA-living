@@ -3,12 +3,15 @@ import axios from 'axios';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 console.log('API: Base URL configured as:', API_BASE_URL);
+console.log('API: Environment variable value:', process.env.NEXT_PUBLIC_API_URL);
+console.log('API: Node environment:', process.env.NODE_ENV);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
 
 // Add request interceptor for debugging
@@ -16,6 +19,8 @@ api.interceptors.request.use(
   (config) => {
     console.log('API: Making request to:', config.url);
     console.log('API: Full URL:', (config.baseURL || '') + (config.url || ''));
+    console.log('API: Request method:', config.method?.toUpperCase());
+    console.log('API: Request headers:', config.headers);
     return config;
   },
   (error) => {
@@ -28,11 +33,27 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     console.log('API: Response received from:', response.config?.url);
+    console.log('API: Response status:', response.status);
+    console.log('API: Response data type:', typeof response.data);
+    console.log('API: Response data:', response.data);
     return response;
   },
   (error) => {
     console.error('API: Response error from:', error.config?.url);
-    console.error('API: Error details:', error.response?.data || error.message);
+    console.error('API: Error status:', error.response?.status);
+    console.error('API: Error message:', error.message);
+    console.error('API: Error response data:', error.response?.data);
+    console.error('API: Error config:', error.config);
+    
+    // Log more details for network errors
+    if (error.code === 'ERR_NETWORK') {
+      console.error('API: Network error detected - this usually means:');
+      console.error('  - Wrong API URL');
+      console.error('  - CORS issue');
+      console.error('  - Backend not running');
+      console.error('  - Network connectivity issue');
+    }
+    
     return Promise.reject(error);
   }
 );
