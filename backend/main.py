@@ -29,13 +29,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting Expense Tracker API")
-    logger.info("CORS origins configured for:")
-    logger.info("  - Local development: http://localhost:3000")
-    logger.info("  - Main Vercel: https://la-living-frontend.vercel.app")
-    logger.info("  - Previous Vercel: https://la-living-frontend-git-frontend-ve-b04208-dhruv-sandus-projects.vercel.app")
-    logger.info("  - Current Vercel: https://la-living-frontend-92peotcel-dhruv-sandus-projects.vercel.app")
-    logger.info("  - All Vercel domains: https://*.vercel.app")
-    logger.info("  - All Render domains: https://*.onrender.com")
+    logger.info("CORS configured for Vercel and Render domains")
 
 # Include routers
 app.include_router(users.router, prefix="/api/users", tags=["users"])

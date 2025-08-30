@@ -50,7 +50,6 @@ import TagSelector from '@/components/TagSelector';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import EmptyState from '@/components/EmptyState';
-import DebugInfo from '@/components/DebugInfo';
 
 
 interface TabPanelProps {
@@ -523,7 +522,6 @@ const ExpensesPage = () => {
           </Box>
 
           {/* Debug Information - Temporary */}
-          <DebugInfo />
 
         {/* Budget Summary */}
         <Card sx={{ mb: 3 }}>
