@@ -9,9 +9,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        "https://*.vercel.app",   # Vercel preview deployments
-        "https://*.vercel.app",   # Vercel production
-        "https://la-living-frontend.vercel.app",  # Replace with your actual Vercel domain
+        "https://*.vercel.app",   # All Vercel domains (preview + production)
+        "https://*.onrender.com", # All Render domains (if needed)
     ],
     allow_credentials=True,
     allow_methods=["*"],

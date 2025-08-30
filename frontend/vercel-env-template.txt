@@ -3,9 +3,17 @@
 
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://mzclzcgzfpbghlbuiolk.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Y2x6Y2d6ZnBiZ2hsYnVpb2xrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyMTQzNjcsImV4cCI6MjA3MDc5MDM2N30.D97A-7oR6IqMukT2P-sSaCqpFMFvqZs4CkXkzun2I0Y
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
 # Production Backend API
-NEXT_PUBLIC_API_URL=https://la-living-backend.onrender.com
+# IMPORTANT: Use your actual Render backend URL here
+# It will look like: https://your-service-name.onrender.com
+NEXT_PUBLIC_API_URL=https://your-actual-backend-name.onrender.com
 
 # Note: All variables starting with NEXT_PUBLIC_ will be available in the browser
+# 
+# DEPLOYMENT STRATEGY:
+# 1. Deploy backend to Render FIRST
+# 2. Copy the Render URL to NEXT_PUBLIC_API_URL
+# 3. Deploy frontend to Vercel
+# 4. Backend CORS will work for ANY Vercel domain
