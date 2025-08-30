@@ -15,7 +15,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",  # Local development
         "https://la-living-frontend.vercel.app",  # Main Vercel domain
-        "https://la-living-frontend-git-frontend-ve-b04208-dhruv-sandus-projects.vercel.app",  # Current Vercel domain
+        "https://la-living-frontend-git-frontend-ve-b04208-dhruv-sandus-projects.vercel.app",  # Previous Vercel domain
+        "https://la-living-frontend-92peotcel-dhruv-sandus-projects.vercel.app",  # Current Vercel domain
         "https://*.vercel.app",   # All Vercel domains (preview + production)
         "https://*.onrender.com", # All Render domains (if needed)
     ],
@@ -31,7 +32,8 @@ async def startup_event():
     logger.info("CORS origins configured for:")
     logger.info("  - Local development: http://localhost:3000")
     logger.info("  - Main Vercel: https://la-living-frontend.vercel.app")
-    logger.info("  - Current Vercel: https://la-living-frontend-git-frontend-ve-b04208-dhruv-sandus-projects.vercel.app")
+    logger.info("  - Previous Vercel: https://la-living-frontend-git-frontend-ve-b04208-dhruv-sandus-projects.vercel.app")
+    logger.info("  - Current Vercel: https://la-living-frontend-92peotcel-dhruv-sandus-projects.vercel.app")
     logger.info("  - All Vercel domains: https://*.vercel.app")
     logger.info("  - All Render domains: https://*.onrender.com")
 
