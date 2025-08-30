@@ -2,12 +2,40 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+console.log('API: Base URL configured as:', API_BASE_URL);
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log('API: Making request to:', config.url);
+    console.log('API: Full URL:', (config.baseURL || '') + (config.url || ''));
+    return config;
+  },
+  (error) => {
+    console.error('API: Request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log('API: Response received from:', response.config?.url);
+    return response;
+  },
+  (error) => {
+    console.error('API: Response error from:', error.config?.url);
+    console.error('API: Error details:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 // Types
 

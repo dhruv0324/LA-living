@@ -11,7 +11,8 @@ app.add_middleware(
         "http://localhost:3000",  # Local development
         "https://*.vercel.app",   # Vercel preview deployments
         "https://*.vercel.app",   # Vercel production
-        "https://us-living.vercel.app",  # Your main domain (update this)
+        # Add your specific Vercel domain below (e.g., https://your-app.vercel.app)
+        # "https://your-app.vercel.app",  # Replace with your actual Vercel domain
     ],
     allow_credentials=True,
     allow_methods=["*"],

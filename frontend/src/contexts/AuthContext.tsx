@@ -86,21 +86,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('AuthContext: Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
+          console.error('AuthContext: Error getting session:', error);
         }
 
+        console.log('AuthContext: Session data:', session);
+        
         if (session?.user) {
+          console.log('AuthContext: User found in session:', session.user.id);
           setAuthUser(session.user);
           const userProfile = await fetchUserProfile(session.user.id);
           if (userProfile) {
+            console.log('AuthContext: User profile fetched:', userProfile.name);
             setUser(userProfile);
+          } else {
+            console.log('AuthContext: Failed to fetch user profile');
           }
+        } else {
+          console.log('AuthContext: No session found');
         }
       } catch (error) {
-        console.error('Error getting initial session:', error);
+        console.error('AuthContext: Exception getting initial session:', error);
       } finally {
         setLoading(false);
       }
@@ -111,18 +120,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change event:', event, session?.user?.id);
+        console.log('AuthContext: Auth state change event:', event, session?.user?.id);
         
         if (session?.user) {
           setAuthUser(session.user);
           
-          // Only fetch profile for sign in events, not sign up
-          if (event === 'SIGNED_IN') {
-            console.log('User signed in, fetching profile...');
-            const userProfile = await fetchUserProfile(session.user.id);
-            if (userProfile) {
-              setUser(userProfile);
-            }
+          // Add a small delay for all auth events to ensure database consistency
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const userProfile = await fetchUserProfile(session.user.id);
+          if (userProfile) {
+            setUser(userProfile);
           }
         } else {
           setAuthUser(null);
