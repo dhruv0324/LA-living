@@ -701,9 +701,40 @@ export default function DebtsPage() {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenPersonModal(false)}>Cancel</Button>
-              <Button variant="contained" onClick={() => {
-                // Handle save
-                setOpenPersonModal(false);
+              <Button variant="contained" onClick={async () => {
+                try {
+                  if (!personFormData.name.trim()) {
+                    showNotification('Please enter a name', 'error');
+                    return;
+                  }
+
+                  if (editingPerson) {
+                    // Update existing person
+                    await peopleApi.update(editingPerson.person_id, {
+                      user_id: user!.id,
+                      name: personFormData.name.trim(),
+                    });
+                    showNotification('Person updated successfully!', 'success');
+                  } else {
+                    // Create new person
+                    await peopleApi.create({
+                      user_id: user!.id,
+                      name: personFormData.name.trim(),
+                    });
+                    showNotification('Person added successfully!', 'success');
+                  }
+
+                  // Reset form and close modal
+                  setPersonFormData({ name: '' });
+                  setEditingPerson(null);
+                  setOpenPersonModal(false);
+                  
+                  // Reload data
+                  await loadPeople();
+                } catch (error) {
+                  console.error('Failed to save person:', error);
+                  showNotification('Failed to save person', 'error');
+                }
               }}>
                 {editingPerson ? 'Update' : 'Add'}
               </Button>
@@ -779,9 +810,58 @@ export default function DebtsPage() {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenDebtModal(false)}>Cancel</Button>
-              <Button variant="contained" onClick={() => {
-                // Handle save
-                setOpenDebtModal(false);
+              <Button variant="contained" onClick={async () => {
+                try {
+                  if (!debtFormData.person_id) {
+                    showNotification('Please select a person', 'error');
+                    return;
+                  }
+
+                  if (!debtFormData.amount || parseFloat(debtFormData.amount) <= 0) {
+                    showNotification('Please enter a valid amount', 'error');
+                    return;
+                  }
+
+                  const debtData = {
+                    person_id: debtFormData.person_id,
+                    amount: parseFloat(debtFormData.amount),
+                    type: debtFormData.type,
+                    notes: debtFormData.notes,
+                    debt_date: debtFormData.debt_date,
+                    tag_id: selectedTag?.tag_id,
+                    is_settled: false,
+                  };
+
+                  if (editingDebt) {
+                    // Update existing debt
+                    await debtApi.update(editingDebt.debt_id, debtData);
+                    showNotification('Debt updated successfully!', 'success');
+                  } else {
+                    // Create new debt
+                    await debtApi.create(debtData);
+                    showNotification('Debt added successfully!', 'success');
+                  }
+
+                  // Reset form and close modal
+                  setDebtFormData({
+                    person_id: '',
+                    amount: '',
+                    type: 'OwedToMe',
+                    notes: '',
+                    category: '',
+                    place: '',
+                    debt_date: new Date().toISOString().split('T')[0],
+                  });
+                  setSelectedTag(null);
+                  setEditingDebt(null);
+                  setOpenDebtModal(false);
+                  
+                  // Reload data
+                  await Promise.all([loadDebts(), loadDebtSummary()]);
+                } catch (error) {
+                  console.error('Failed to save debt:', error);
+                  showNotification('Failed to save debt', 'error');
+                }
               }}>
                 {editingDebt ? 'Update' : 'Add'}
               </Button>

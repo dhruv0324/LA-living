@@ -262,9 +262,42 @@ export default function LoansPage() {
               }}>
                 Cancel
               </Button>
-              <Button onClick={() => {
-                // Handle add loan
-                setOpenLoanModal(false);
+              <Button onClick={async () => {
+                try {
+                  if (!loanFormData.loan_name.trim()) {
+                    showNotification('Please enter a loan name', 'error');
+                    return;
+                  }
+
+                  if (!loanFormData.total_amount || parseFloat(loanFormData.total_amount) <= 0) {
+                    showNotification('Please enter a valid total amount', 'error');
+                    return;
+                  }
+
+                  const loanData = {
+                    user_id: user!.id,
+                    loan_name: loanFormData.loan_name.trim(),
+                    total_amount: parseFloat(loanFormData.total_amount),
+                    taken_amount: loanFormData.taken_amount ? parseFloat(loanFormData.taken_amount) : 0,
+                  };
+
+                  await loanApi.create(loanData);
+                  showNotification('Loan added successfully!', 'success');
+
+                  // Reset form and close modal
+                  setLoanFormData({
+                    loan_name: '',
+                    total_amount: '',
+                    taken_amount: '',
+                  });
+                  setOpenLoanModal(false);
+                  
+                  // Reload data
+                  await loadLoans();
+                } catch (error) {
+                  console.error('Failed to add loan:', error);
+                  showNotification('Failed to add loan', 'error');
+                }
               }} variant="contained">
                 Add Loan
               </Button>
@@ -646,9 +679,50 @@ export default function LoansPage() {
                 Cancel
               </Button>
               <Button 
-                onClick={() => {
-                  // Handle save
-                  setOpenLoanModal(false);
+                onClick={async () => {
+                  try {
+                    if (!loanFormData.loan_name.trim()) {
+                      showNotification('Please enter a loan name', 'error');
+                      return;
+                    }
+
+                    if (!loanFormData.total_amount || parseFloat(loanFormData.total_amount) <= 0) {
+                      showNotification('Please enter a valid total amount', 'error');
+                      return;
+                    }
+
+                    const loanData = {
+                      user_id: user!.id,
+                      loan_name: loanFormData.loan_name.trim(),
+                      total_amount: parseFloat(loanFormData.total_amount),
+                      taken_amount: loanFormData.taken_amount ? parseFloat(loanFormData.taken_amount) : 0,
+                    };
+
+                    if (editingLoan) {
+                      // Update existing loan
+                      await loanApi.update(editingLoan.loan_id, loanData);
+                      showNotification('Loan updated successfully!', 'success');
+                    } else {
+                      // Create new loan
+                      await loanApi.create(loanData);
+                      showNotification('Loan added successfully!', 'success');
+                    }
+
+                    // Reset form and close modal
+                    setLoanFormData({
+                      loan_name: '',
+                      total_amount: '',
+                      taken_amount: '',
+                    });
+                    setEditingLoan(null);
+                    setOpenLoanModal(false);
+                    
+                    // Reload data
+                    await loadLoans();
+                  } catch (error) {
+                    console.error('Failed to save loan:', error);
+                    showNotification('Failed to save loan', 'error');
+                  }
                 }} 
                 variant="contained"
               >
@@ -773,9 +847,58 @@ export default function LoansPage() {
                 Cancel
               </Button>
               <Button 
-                onClick={() => {
-                  // Handle save
-                  setOpenDisbursementModal(false);
+                onClick={async () => {
+                  try {
+                    if (!disbursementFormData.amount || parseFloat(disbursementFormData.amount) <= 0) {
+                      showNotification('Please enter a valid amount', 'error');
+                      return;
+                    }
+
+                    if (!selectedLoan) {
+                      showNotification('Please select a loan first', 'error');
+                      return;
+                    }
+
+                    const disbursementData = {
+                      loan_id: selectedLoan.loan_id,
+                      user_id: user!.id,
+                      amount: parseFloat(disbursementFormData.amount),
+                      notes: disbursementFormData.notes,
+                      disbursement_date: disbursementFormData.disbursement_date,
+                      tag_id: selectedTag?.tag_id,
+                    };
+
+                    if (editingDisbursement) {
+                      // Update existing disbursement
+                      await loanDisbursementApi.update(editingDisbursement.disbursement_id, disbursementData);
+                      showNotification('Disbursement updated successfully!', 'success');
+                    } else {
+                      // Create new disbursement
+                      await loanDisbursementApi.create({
+                        ...disbursementData,
+                        account_id: disbursementType === 'personal' ? disbursementFormData.account_id : undefined,
+                      });
+                      showNotification('Disbursement added successfully!', 'success');
+                    }
+
+                    // Reset form and close modal
+                    setDisbursementFormData({
+                      amount: '',
+                      category: '',
+                      notes: '',
+                      disbursement_date: format(new Date(), 'yyyy-MM-dd'),
+                      account_id: '',
+                    });
+                    setSelectedTag(null);
+                    setEditingDisbursement(null);
+                    setOpenDisbursementModal(false);
+                    
+                    // Reload data
+                    await loadDisbursements();
+                  } catch (error) {
+                    console.error('Failed to save disbursement:', error);
+                    showNotification('Failed to save disbursement', 'error');
+                  }
                 }} 
                 variant="contained"
               >
