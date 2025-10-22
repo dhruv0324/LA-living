@@ -9,15 +9,11 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Expense Tracker API", version="1.0.0")
 
-# CORS middleware - Updated for production deployment with explicit domains
+# CORS middleware - Allow all Vercel domains for production flexibility
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        "https://la-living-frontend.vercel.app",  # Main Vercel domain
-        "https://la-living-frontend-git-frontend-ve-b04208-dhruv-sandus-projects.vercel.app",  # Previous Vercel domain
-        "https://la-living-frontend-92peotcel-dhruv-sandus-projects.vercel.app",  # Previous Vercel domain
-        "https://la-living-frontend-p303670l6-dhruv-sandus-projects.vercel.app",  # Current Vercel domain
         "https://*.vercel.app",   # All Vercel domains (preview + production)
         "https://*.onrender.com", # All Render domains (if needed)
     ],
