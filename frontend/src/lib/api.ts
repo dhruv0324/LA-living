@@ -2,6 +2,16 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Log API URL in development to help with debugging
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('API Base URL:', API_BASE_URL);
+}
+
+// Warn if using localhost in production
+if (typeof window !== 'undefined' && API_BASE_URL.includes('localhost') && process.env.NODE_ENV === 'production') {
+  console.error('⚠️ WARNING: API URL is set to localhost in production! Set NEXT_PUBLIC_API_URL in Vercel environment variables.');
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
