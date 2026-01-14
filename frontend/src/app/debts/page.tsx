@@ -974,6 +974,7 @@ export default function DebtsPage() {
               notes: '',
               place: '',
               debt_date: new Date().toISOString().split('T')[0],
+              account_id: '',
             });
             setSelectedTag(null);
           }} maxWidth="sm" fullWidth>

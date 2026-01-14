@@ -731,7 +731,7 @@ export default function LoansPage() {
                     // Update selected loan if it was the one edited
                     if (editingLoan && selectedLoan?.loan_id === editingLoan.loan_id) {
                       const updatedLoans = await loanApi.getAll(user!.id);
-                      const updatedLoan = updatedLoans.data?.find(l => l.loan_id === editingLoan.loan_id);
+                      const updatedLoan = updatedLoans.data?.find((l: Loan) => l.loan_id === editingLoan.loan_id);
                       if (updatedLoan) {
                         setSelectedLoan(updatedLoan);
                       }
@@ -922,7 +922,7 @@ export default function LoansPage() {
                     // Update selected loan after disbursement operations
                     if (selectedLoan) {
                       const updatedLoans = await loanApi.getAll(user!.id);
-                      const updatedLoan = updatedLoans.data?.find(l => l.loan_id === selectedLoan.loan_id);
+                      const updatedLoan = updatedLoans.data?.find((l: Loan) => l.loan_id === selectedLoan.loan_id);
                       if (updatedLoan) {
                         setSelectedLoan(updatedLoan);
                       }
