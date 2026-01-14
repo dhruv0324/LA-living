@@ -1,4 +1,4 @@
-# LA Living - Personal Finance Tracker
+# Personal Finance Tracker
 
 A comprehensive personal finance management application built with modern web technologies. Track expenses, manage budgets, monitor loans, handle debts, and gain insights into your financial health with an intuitive dashboard and AI-powered financial assistant.
 
