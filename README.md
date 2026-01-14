@@ -316,9 +316,6 @@ The frontend leverages Next.js 15 features:
 - Check that `NEXT_PUBLIC_API_URL` is set correctly in frontend
 - Ensure backend is running and accessible
 
-## License
-
-This project is licensed under the MIT License.
 
 ## Acknowledgments
 
