@@ -4,4 +4,5 @@ pydantic==2.11.7
 python-multipart==0.0.12
 python-dotenv==1.0.1
 supabase==2.18.1
-gunicorn==21.2.0 
+gunicorn==21.2.0
+groq>=1.0.0 

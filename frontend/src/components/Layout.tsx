@@ -28,6 +28,7 @@ import {
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  SmartToy as SmartToyIcon,
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,10 +67,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'expenses', text: 'Expenses', icon: <Receipt />, path: '/expenses' },
     { id: 'income', text: 'Income', icon: <TrendingUp />, path: '/income' },
     { id: 'budget', text: 'Budget', icon: <Assessment />, path: '/budget' },
-    { id: 'payment-methods', text: 'Payment Methods', icon: <AccountBalance />, path: '/payment-methods' },
+    { id: 'payment-methods', text: 'Wallet', icon: <AccountBalance />, path: '/payment-methods' },
     { id: 'debts', text: 'Debts', icon: <People />, path: '/debts' },
     { id: 'loans', text: 'Loans', icon: <CreditCard />, path: '/loans' },
     { id: 'statistics', text: 'Statistics', icon: <Analytics />, path: '/statistics' },
+    { id: 'ai-assistant', text: 'AI Assistant (Beta)', icon: <SmartToyIcon />, path: '/ai-assistant' },
   ];
 
   const handleNavigation = (path: string) => {

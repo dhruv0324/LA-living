@@ -28,16 +28,17 @@ import {
   Snackbar,
   Alert,
   Chip,
-  Fab,
   Tooltip,
   TablePagination,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CalendarMonth as CalendarIcon,
-  TableView as TableIcon,
+  CalendarMonth as CalendarMonthIcon,
+  TableChart as TableChartIcon,
   TrendingUp as TrendingUpIcon,
   AccountBalance as AccountBalanceIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -64,7 +65,7 @@ export default function IncomePage() {
   const [income, setIncome] = useState<Income[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
+  const [tabValue, setTabValue] = useState(0); // 0 for table, 1 for calendar
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [page, setPage] = useState(0);
@@ -158,7 +159,7 @@ export default function IncomePage() {
        }
 
        if (!incomeFormData.account_id) {
-         showNotification('Please select a payment method', 'error');
+         showNotification('Please select an account', 'error');
          return;
        }
 
@@ -192,7 +193,7 @@ export default function IncomePage() {
        }
 
        if (!incomeFormData.account_id) {
-         showNotification('Please select a payment method', 'error');
+         showNotification('Please select an account', 'error');
          return;
        }
 
@@ -417,65 +418,6 @@ export default function IncomePage() {
             </Box>
           </Box>
 
-          {/* Controls Section */}
-          <Card sx={{ p: 3, mb: 4, borderRadius: 3 }}>
-            <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-              {/* Month/Year Dropdowns */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  Filter by:
-                </Typography>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Month</InputLabel>
-                  <Select
-                    value={selectedMonth}
-                    label="Month"
-                    onChange={(e) => setSelectedMonth(e.target.value as number)}
-                  >
-                    {monthNames.map((month, index) => (
-                      <MenuItem key={index} value={index + 1}>
-                        {month}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <InputLabel>Year</InputLabel>
-                  <Select
-                    value={selectedYear}
-                    label="Year"
-                    onChange={(e) => setSelectedYear(e.target.value as number)}
-                  >
-                    {Array.from({ length: 10 }, (_, i) => selectedYear - 5 + i).map(year => (
-                      <MenuItem key={year} value={year}>
-                        {year}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* View Mode Toggle */}
-              <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-                <Button
-                  variant={viewMode === 'table' ? 'contained' : 'outlined'}
-                  startIcon={<TableIcon />}
-                  onClick={() => setViewMode('table')}
-                  sx={{ borderRadius: 2 }}
-                >
-                  Table
-                </Button>
-                <Button
-                  variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
-                  startIcon={<CalendarIcon />}
-                  onClick={() => setViewMode('calendar')}
-                  sx={{ borderRadius: 2 }}
-                >
-                  Calendar
-                </Button>
-              </Box>
-            </Box>
-          </Card>
 
           {/* Summary Cards */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -557,8 +499,16 @@ export default function IncomePage() {
             </Grid>
           </Grid>
 
+          {/* Tabs for Table and Calendar View */}
+          <Paper sx={{ mb: 3 }}>
+            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+              <Tab icon={<TableChartIcon />} label="Table View" />
+              <Tab icon={<CalendarMonthIcon />} label="Calendar View" />
+            </Tabs>
+          </Paper>
+
           {/* Table View */}
-          {viewMode === 'table' && (
+          {tabValue === 0 && (
             <Paper sx={{ mb: 3 }}>
               <TableContainer>
                 <Table>
@@ -567,7 +517,7 @@ export default function IncomePage() {
                       <TableCell>Date</TableCell>
                       <TableCell>Amount</TableCell>
                       <TableCell>Source</TableCell>
-                                             <TableCell>Payment Method</TableCell>
+                                             <TableCell>Account</TableCell>
                       <TableCell>Notes</TableCell>
                       <TableCell align="center">Actions</TableCell>
                     </TableRow>
@@ -601,7 +551,7 @@ export default function IncomePage() {
                             </TableCell>
                                                          <TableCell>
                                <Typography variant="body2">
-                                 {entry.account_name || 'No payment method'}
+                                 {entry.account_name || 'No account'}
                                </Typography>
                              </TableCell>
                             <TableCell>
@@ -650,7 +600,7 @@ export default function IncomePage() {
           )}
 
           {/* Calendar View */}
-          {viewMode === 'calendar' && (
+          {tabValue === 1 && (
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 {monthNames[selectedMonth - 1]} {selectedYear}
@@ -712,16 +662,6 @@ export default function IncomePage() {
             </Paper>
           )}
 
-          {/* Floating Action Button */}
-          <Fab
-            color="primary"
-            aria-label="add income"
-            sx={{ position: 'fixed', bottom: 16, right: 16 }}
-            onClick={() => setOpenAddModal(true)}
-          >
-            <AddIcon />
-          </Fab>
-
           {/* Add Income Modal */}
           <Dialog open={openAddModal} onClose={() => {
             setOpenAddModal(false);
@@ -765,13 +705,13 @@ export default function IncomePage() {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth required>
-                    <InputLabel>Payment Method</InputLabel>
+                    <InputLabel>Account</InputLabel>
                     <Select
                       value={incomeFormData.account_id}
-                      label="Payment Method"
+                      label="Account"
                       onChange={(e) => setIncomeFormData({ ...incomeFormData, account_id: e.target.value })}
                     >
-                      <MenuItem value="">Select Payment Method</MenuItem>
+                      <MenuItem value="">Select Account</MenuItem>
                       {accounts.map(account => (
                         <MenuItem key={account.account_id} value={account.account_id}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
@@ -851,13 +791,13 @@ export default function IncomePage() {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth required>
-                    <InputLabel>Payment Method</InputLabel>
+                    <InputLabel>Account</InputLabel>
                     <Select
                       value={incomeFormData.account_id}
-                      label="Payment Method"
+                      label="Account"
                       onChange={(e) => setIncomeFormData({ ...incomeFormData, account_id: e.target.value })}
                     >
-                      <MenuItem value="">Select Payment Method</MenuItem>
+                      <MenuItem value="">Select Account</MenuItem>
                       {accounts.map(account => (
                         <MenuItem key={account.account_id} value={account.account_id}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>

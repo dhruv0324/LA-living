@@ -100,6 +100,7 @@ export interface Debt {
   debt_date?: string;
   place?: string;
   tag_id?: string;
+  account_id?: string; // For OwedToMe debts - account from which money was lent
   created_at: string;
   person_name?: string; // Added by backend when fetching with person info
   tag_name?: string;
@@ -196,8 +197,8 @@ export const peopleApi = {
 };
 
 export const debtApi = {
-  create: (data: Omit<Debt, 'debt_id' | 'created_at' | 'person_name'>) =>
-    api.post('/api/debts/', data),
+  create: (data: Omit<Debt, 'debt_id' | 'created_at' | 'person_name'> & { account_id?: string }) =>
+    api.post('/api/debts/', data, { params: data.account_id ? { account_id: data.account_id } : {} }),
   getAll: (params: { user_id: string; type?: string; is_settled?: boolean }) =>
     api.get('/api/debts/', { params }),
   getById: (debtId: string) => api.get(`/api/debts/${debtId}`),
@@ -207,8 +208,8 @@ export const debtApi = {
     api.post(`/api/debts/settle-by-type/${personId}`, null, { params: { account_id: accountId, debt_type: debtType } }),
   settleNet: (personId: string, accountId: string) => 
     api.post(`/api/debts/settle-net/${personId}`, null, { params: { account_id: accountId } }),
-  update: (debtId: string, data: Omit<Debt, 'debt_id' | 'created_at' | 'person_name'>) =>
-    api.put(`/api/debts/${debtId}`, data),
+  update: (debtId: string, data: Omit<Debt, 'debt_id' | 'created_at' | 'person_name'> & { account_id?: string }) =>
+    api.put(`/api/debts/${debtId}`, data, { params: data.account_id ? { account_id: data.account_id } : {} }),
   delete: (debtId: string) => api.delete(`/api/debts/${debtId}`),
   getSummary: (userId: string) => api.get(`/api/debts/summary/${userId}`),
 };
@@ -232,6 +233,22 @@ export const loanDisbursementApi = {
   update: (disbursementId: string, data: Omit<LoanDisbursement, 'disbursement_id' | 'created_at'>) =>
     api.put(`/api/loans/disbursements/${disbursementId}`, data),
   delete: (disbursementId: string) => api.delete(`/api/loans/disbursements/${disbursementId}`),
+};
+
+export interface ChatMessage {
+  user_id: string;
+  message: string;
+  conversation_id?: string;
+}
+
+export interface ChatResponse {
+  response: string;
+  conversation_id: string;
+}
+
+export const assistantApi = {
+  chat: (data: ChatMessage) => api.post<ChatResponse>('/api/assistant/chat', data),
+  chatStream: (data: ChatMessage) => api.post('/api/assistant/chat/stream', data, { responseType: 'stream' }),
 };
 
 export const incomeApi = {

@@ -154,12 +154,12 @@ async def get_tag_types(user_id: UUID):
 
 # Helper function for other modules
 async def get_or_create_debt_repayment_tag(user_id: str) -> str:
-    """Get or create the 'Debt Repayment' tag for income"""
+    """Get or create the 'Debt Settlement' tag for income"""
     try:
         # Check if tag already exists
         existing_tags = await tags_repo.get_filtered({
             "user_id": user_id,
-            "name": "Debt Repayment",
+            "name": "Debt Settlement",
             "type": "Income"
         }, limit=1)
         
@@ -169,7 +169,7 @@ async def get_or_create_debt_repayment_tag(user_id: str) -> str:
         # Create new tag
         tag_data = {
             "user_id": user_id,
-            "name": "Debt Repayment",
+            "name": "Debt Settlement",
             "type": "Income"
         }
         result = await tags_repo.create(tag_data)

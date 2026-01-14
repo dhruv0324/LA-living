@@ -61,6 +61,7 @@ import {
   budgetApi, 
   loanApi, 
   debtApi,
+  loanDisbursementApi,
   tagApi,
   Expense, 
   Income, 
@@ -68,6 +69,7 @@ import {
   Budget,
   Loan,
   Debt,
+  LoanDisbursement,
   Tag
 } from '@/lib/api';
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, startOfYear, endOfYear } from 'date-fns';
@@ -91,7 +93,7 @@ interface OverviewStats {
   totalIncome: number;
   totalExpenses: number;
   netWorth: number;
-  savingsRate: number;
+  actualSavings: number;
   totalLoans: number;
   totalDebts: number;
 }
@@ -119,7 +121,7 @@ const StatisticsPage = () => {
     totalIncome: 0,
     totalExpenses: 0,
     netWorth: 0,
-    savingsRate: 0,
+    actualSavings: 0,
     totalLoans: 0,
     totalDebts: 0,
   });
@@ -130,6 +132,9 @@ const StatisticsPage = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [loanDisbursements, setLoanDisbursements] = useState<LoanDisbursement[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   // Filter states
   const [dateRange, setDateRange] = useState('6months');
@@ -181,6 +186,7 @@ const StatisticsPage = () => {
         incomeResponse,
         loansResponse,
         debtsResponse,
+        budgetsResponse,
       ] = await Promise.all([
         accountApi.getAll(user.id),
         expenseApi.getAll({
@@ -199,6 +205,7 @@ const StatisticsPage = () => {
         }),
         loanApi.getAll(user.id),
         debtApi.getAll({ user_id: user.id }),
+        budgetApi.getAll(user.id, end.getFullYear()),
       ]);
 
       const accountsData = accountsResponse.data || [];
@@ -206,10 +213,21 @@ const StatisticsPage = () => {
       const incomeData = incomeResponse.data || [];
       const loansData = loansResponse.data || [];
       const debtsData = debtsResponse.data || [];
+      const budgetsData = budgetsResponse.data || [];
 
       setAccounts(accountsData);
       setLoans(loansData);
       setDebts(debtsData);
+      setBudgets(budgetsData);
+      setExpenses(expensesData);
+
+      // Load loan disbursements for all loans
+      const disbursementPromises = loansData.map((loan: Loan) =>
+        loanDisbursementApi.getAll(loan.loan_id).catch(() => ({ data: [] }))
+      );
+      const disbursementResponses = await Promise.all(disbursementPromises);
+      const allDisbursements = disbursementResponses.flatMap(res => res.data || []);
+      setLoanDisbursements(allDisbursements);
 
       // Calculate overview stats
       const totalBalance = accountsData.reduce((sum: number, account: Account) => 
@@ -233,14 +251,14 @@ const StatisticsPage = () => {
         .reduce((sum: number, debt: Debt) => sum + parseFloat(debt.amount.toString()), 0);
 
       const netWorth = totalBalance - totalLoans - totalDebts;
-      const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+      const actualSavings = totalIncome - totalExpenses;
 
       setOverviewStats({
         totalBalance,
         totalIncome,
         totalExpenses,
         netWorth,
-        savingsRate,
+        actualSavings,
         totalLoans,
         totalDebts,
       });
@@ -290,8 +308,7 @@ const StatisticsPage = () => {
         expenses: data.expenses,
         savings: data.income - data.expenses,
       }))
-      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
-      .slice(-6); // Last 6 months
+      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
   };
 
   const calculateCategoryBreakdown = (data: (Expense | Income)[], type: 'expense' | 'income'): CategoryData[] => {
@@ -318,6 +335,56 @@ const StatisticsPage = () => {
       .slice(0, 8); // Top 8 categories
   };
 
+  const calculateBudgetVsExpenses = (budgets: Budget[], expenses: Expense[]) => {
+    const monthlyBudgetMap = new Map<string, number>();
+    const monthlyExpenseMap = new Map<string, number>();
+
+    // Process budgets
+    budgets.forEach(budget => {
+      const monthKey = `${budget.year}-${String(budget.month).padStart(2, '0')}`;
+      monthlyBudgetMap.set(monthKey, parseFloat(budget.amount.toString()));
+    });
+
+    // Process expenses by month
+    expenses.forEach(expense => {
+      if (expense.expense_date) {
+        const date = parseISO(expense.expense_date);
+        const monthKey = format(date, 'yyyy-MM');
+        const current = monthlyExpenseMap.get(monthKey) || 0;
+        monthlyExpenseMap.set(monthKey, current + parseFloat(expense.amount.toString()));
+      }
+    });
+
+    // Get all unique months
+    const allMonths = Array.from(new Set([...monthlyBudgetMap.keys(), ...monthlyExpenseMap.keys()]))
+      .sort()
+      .slice(-6); // Last 6 months
+
+    return {
+      labels: allMonths.map(month => {
+        const [year, monthNum] = month.split('-');
+        const date = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
+        return format(date, 'MMM yyyy');
+      }),
+      datasets: [
+        {
+          label: 'Budget',
+          data: allMonths.map(month => monthlyBudgetMap.get(month) || 0),
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 2,
+        },
+        {
+          label: 'Expenses',
+          data: allMonths.map(month => monthlyExpenseMap.get(month) || 0),
+          backgroundColor: 'rgba(255, 99, 132, 0.6)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 2,
+        },
+      ],
+    };
+  };
+
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -326,32 +393,31 @@ const StatisticsPage = () => {
   };
 
   // Chart configurations
-  const monthlyTrendChartData = {
+  const timelineChartData = {
     labels: monthlyTrends.map(data => data.month),
     datasets: [
       {
         label: 'Income',
         data: monthlyTrends.map(data => data.income),
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
         borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.1)',
         borderWidth: 2,
+        fill: false,
+        tension: 0.4,
       },
       {
         label: 'Expenses',
         data: monthlyTrends.map(data => data.expenses),
-        backgroundColor: 'rgba(255, 99, 132, 0.6)',
         borderColor: 'rgba(255, 99, 132, 1)',
+        backgroundColor: 'rgba(255, 99, 132, 0.1)',
         borderWidth: 2,
-      },
-      {
-        label: 'Savings',
-        data: monthlyTrends.map(data => data.savings),
-        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 2,
+        fill: false,
+        tension: 0.4,
       },
     ],
   };
+
+  const budgetVsExpensesData = calculateBudgetVsExpenses(budgets, expenses);
 
   const expenseCategoryChartData = {
     labels: expenseCategories.map(cat => cat.name),
@@ -508,21 +574,21 @@ const StatisticsPage = () => {
           </Typography>
           
           <Grid container spacing={3} mb={4}>
-            {/* Monthly Trends */}
+            {/* Budget vs Expenses */}
             <Grid item xs={12} lg={6}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     <BarChartIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Monthly Trends
+                    Budget vs Expenses
                   </Typography>
                   <Box height={300}>
-                    {monthlyTrends.length > 0 ? (
-                      <Bar data={monthlyTrendChartData} options={chartOptions} />
+                    {budgetVsExpensesData.labels.length > 0 ? (
+                      <Bar data={budgetVsExpensesData} options={chartOptions} />
                     ) : (
                       <EmptyState
-                        title="No Data Available"
-                        description="Add some income and expenses to see trends."
+                        title="No Budget Data"
+                        description="Set up budgets to track your spending."
                         icon={<BarChartIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
                       />
                     )}
@@ -627,12 +693,18 @@ const StatisticsPage = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <Paper sx={{ p: 2, textAlign: 'center' }}>
-                <AssessmentIcon color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                <Typography variant="h6" color="primary.main">
-                  {overviewStats.savingsRate.toFixed(1)}%
+                <AssessmentIcon 
+                  color={overviewStats.actualSavings >= 0 ? "success" : "error"} 
+                  sx={{ fontSize: 40, mb: 1 }} 
+                />
+                <Typography 
+                  variant="h6" 
+                  color={overviewStats.actualSavings >= 0 ? "success.main" : "error.main"}
+                >
+                  {formatCurrency(overviewStats.actualSavings)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Savings Rate
+                  Actual Savings
                 </Typography>
               </Paper>
             </Grid>
@@ -660,201 +732,30 @@ const StatisticsPage = () => {
             Detailed Analysis
           </Typography>
 
-          {/* Income Section */}
+          {/* Income & Expense Timeline */}
           <Accordion sx={{ mb: 2 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <TrendingUpIcon sx={{ mr: 2, color: 'success.main' }} />
-              <Typography variant="h6">Income Analysis</Typography>
+              <Typography variant="h6">Income & Expense Timeline</Typography>
               <Chip 
-                label={formatCurrency(overviewStats.totalIncome)} 
-                color="success" 
-                size="small" 
-                sx={{ ml: 2 }} 
-              />
-            </AccordionSummary>
-            <AccordionDetails>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Income by Source
-                  </Typography>
-                  <Box height={250}>
-                    {incomeCategories.length > 0 ? (
-                      <Pie data={incomeCategoryChartData} options={pieChartOptions} />
-                    ) : (
-                      <EmptyState
-                        title="No Income Data"
-                        description="Add some income to see source breakdown."
-                        icon={<TrendingUpIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
-                      />
-                    )}
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Top Income Sources
-                  </Typography>
-                  <Stack spacing={1}>
-                    {incomeCategories.slice(0, 5).map((category, index) => (
-                      <Box key={category.name} display="flex" justifyContent="space-between" alignItems="center">
-                        <Box display="flex" alignItems="center">
-                          <Box 
-                            sx={{ 
-                              width: 16, 
-                              height: 16, 
-                              bgcolor: category.color, 
-                              mr: 1,
-                              borderRadius: 1 
-                            }} 
-                          />
-                          <Typography variant="body2">{category.name}</Typography>
-                        </Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {formatCurrency(category.amount)}
-                        </Typography>
-                      </Box>
-                    ))}
-                    {incomeCategories.length === 0 && (
-                      <Typography variant="body2" color="text.secondary">
-                        No income data available
-                      </Typography>
-                    )}
-                  </Stack>
-                </Grid>
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-
-          {/* Expenses Section */}
-          <Accordion sx={{ mb: 2 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <TrendingDownIcon sx={{ mr: 2, color: 'error.main' }} />
-              <Typography variant="h6">Expense Analysis</Typography>
-              <Chip 
-                label={formatCurrency(overviewStats.totalExpenses)} 
-                color="error" 
-                size="small" 
-                sx={{ ml: 2 }} 
-              />
-            </AccordionSummary>
-            <AccordionDetails>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Expenses by Category
-                  </Typography>
-                  <Box height={250}>
-                    {expenseCategories.length > 0 ? (
-                      <Pie data={expenseCategoryChartData} options={pieChartOptions} />
-                    ) : (
-                      <EmptyState
-                        title="No Expense Data"
-                        description="Add some expenses to see category breakdown."
-                        icon={<TrendingDownIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
-                      />
-                    )}
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Top Expense Categories
-                  </Typography>
-                  <Stack spacing={1}>
-                    {expenseCategories.slice(0, 5).map((category, index) => (
-                      <Box key={category.name} display="flex" justifyContent="space-between" alignItems="center">
-                        <Box display="flex" alignItems="center">
-                          <Box 
-                            sx={{ 
-                              width: 16, 
-                              height: 16, 
-                              bgcolor: category.color, 
-                              mr: 1,
-                              borderRadius: 1 
-                            }} 
-                          />
-                          <Typography variant="body2">{category.name}</Typography>
-                        </Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {formatCurrency(category.amount)}
-                        </Typography>
-                      </Box>
-                    ))}
-                    {expenseCategories.length === 0 && (
-                      <Typography variant="body2" color="text.secondary">
-                        No expense data available
-                      </Typography>
-                    )}
-                  </Stack>
-                </Grid>
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-
-          {/* Budget Section */}
-          <Accordion sx={{ mb: 2 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <AssessmentIcon sx={{ mr: 2, color: 'primary.main' }} />
-              <Typography variant="h6">Budget Analysis</Typography>
-              <Chip 
-                label={`${overviewStats.savingsRate.toFixed(1)}% Savings Rate`} 
+                label="Trend Analysis" 
                 color="primary" 
                 size="small" 
                 sx={{ ml: 2 }} 
               />
             </AccordionSummary>
             <AccordionDetails>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Income vs Expenses Trend
-                  </Typography>
-                  <Box height={250}>
-                    {monthlyTrends.length > 0 ? (
-                      <Line data={monthlyTrendChartData} options={chartOptions} />
-                    ) : (
-                      <EmptyState
-                        title="No Trend Data"
-                        description="Add some income and expenses to see trends."
-                        icon={<AssessmentIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
-                      />
-                    )}
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Financial Health Metrics
-                  </Typography>
-                  <Stack spacing={2}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Income
-                      </Typography>
-                      <Typography variant="h6" color="success.main">
-                        {formatCurrency(overviewStats.totalIncome)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Expenses
-                      </Typography>
-                      <Typography variant="h6" color="error.main">
-                        {formatCurrency(overviewStats.totalExpenses)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Net Savings
-                      </Typography>
-                      <Typography 
-                        variant="h6" 
-                        color={overviewStats.totalIncome - overviewStats.totalExpenses >= 0 ? "success.main" : "error.main"}
-                      >
-                        {formatCurrency(overviewStats.totalIncome - overviewStats.totalExpenses)}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Grid>
-              </Grid>
+              <Box height={400}>
+                {monthlyTrends.length > 0 ? (
+                  <Line data={timelineChartData} options={chartOptions} />
+                ) : (
+                  <EmptyState
+                    title="No Timeline Data"
+                    description="Add some income and expenses to see trends over time."
+                    icon={<TrendingUpIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
+                  />
+                )}
+              </Box>
             </AccordionDetails>
           </Accordion>
 
@@ -947,6 +848,18 @@ const StatisticsPage = () => {
                   <Stack spacing={2}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
+                        Total Loan Amount
+                      </Typography>
+                      <Typography variant="h6" color="primary.main">
+                        {formatCurrency(
+                          loans.reduce((sum, loan) => 
+                            sum + parseFloat(loan.total_amount?.toString() || '0'), 0
+                          )
+                        )}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
                         Total Remaining Amount
                       </Typography>
                       <Typography variant="h6" color="error.main">
@@ -961,21 +874,53 @@ const StatisticsPage = () => {
                         {loans.length}
                       </Typography>
                     </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Disbursements
+                      </Typography>
+                      <Typography variant="h6" color="warning.main">
+                        {loanDisbursements.length}
+                      </Typography>
+                    </Box>
                   </Stack>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1" gutterBottom>
                     Loan Details
                   </Typography>
-                  <Stack spacing={1}>
-                    {loans.map((loan, index) => (
-                      <Box key={loan.loan_id} display="flex" justifyContent="space-between">
-                        <Typography variant="body2">{loan.loan_name || `Loan ${index + 1}`}:</Typography>
-                        <Typography variant="body2" color="error.main">
-                          {formatCurrency(parseFloat(loan.remaining_amount?.toString() || '0'))}
-                        </Typography>
-                      </Box>
-                    ))}
+                  <Stack spacing={2}>
+                    {loans.map((loan, index) => {
+                      const loanDisbursementsForLoan = loanDisbursements.filter(
+                        d => d.loan_id === loan.loan_id
+                      );
+                      return (
+                        <Box key={loan.loan_id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Typography variant="body1" fontWeight="medium" gutterBottom>
+                            {loan.loan_name || `Loan ${index + 1}`}
+                          </Typography>
+                          <Stack spacing={0.5}>
+                            <Box display="flex" justifyContent="space-between">
+                              <Typography variant="body2" color="text.secondary">Total Amount:</Typography>
+                              <Typography variant="body2" fontWeight="medium">
+                                {formatCurrency(parseFloat(loan.total_amount?.toString() || '0'))}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" justifyContent="space-between">
+                              <Typography variant="body2" color="text.secondary">Remaining:</Typography>
+                              <Typography variant="body2" color="error.main" fontWeight="medium">
+                                {formatCurrency(parseFloat(loan.remaining_amount?.toString() || '0'))}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" justifyContent="space-between">
+                              <Typography variant="body2" color="text.secondary">Disbursements:</Typography>
+                              <Typography variant="body2" fontWeight="medium">
+                                {loanDisbursementsForLoan.length}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box>
+                      );
+                    })}
                     {loans.length === 0 && (
                       <Typography variant="body2" color="text.secondary">
                         No active loans
@@ -983,6 +928,42 @@ const StatisticsPage = () => {
                     )}
                   </Stack>
                 </Grid>
+                {loanDisbursements.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Disbursements Over Time
+                    </Typography>
+                    <Box height={300}>
+                      {(() => {
+                        const disbursementMap = new Map<string, number>();
+                        loanDisbursements.forEach(disbursement => {
+                          if (disbursement.disbursement_date) {
+                            const month = format(parseISO(disbursement.disbursement_date), 'MMM yyyy');
+                            const current = disbursementMap.get(month) || 0;
+                            disbursementMap.set(month, current + parseFloat(disbursement.amount.toString()));
+                          }
+                        });
+                        const sortedMonths = Array.from(disbursementMap.entries())
+                          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+                        
+                        const disbursementChartData = {
+                          labels: sortedMonths.map(([month]) => month),
+                          datasets: [{
+                            label: 'Disbursement Amount',
+                            data: sortedMonths.map(([, amount]) => amount),
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                          }],
+                        };
+                        
+                        return <Line data={disbursementChartData} options={chartOptions} />;
+                      })()}
+                    </Box>
+                  </Grid>
+                )}
               </Grid>
             </AccordionDetails>
           </Accordion>

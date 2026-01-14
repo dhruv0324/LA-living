@@ -158,12 +158,14 @@ class DebtBase(BaseModel):
     debt_date: Optional[date] = None
     place: Optional[str] = None
     tag_id: Optional[UUID] = None
+    account_id: Optional[str] = None  # For OwedToMe debts - account from which money was lent
 
 class DebtCreate(DebtBase):
     pass
 
 class Debt(DebtBase):
     debt_id: UUID
+    user_id: UUID
     created_at: datetime
 
     class Config:

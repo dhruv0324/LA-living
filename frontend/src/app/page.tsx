@@ -687,41 +687,43 @@ const Dashboard = () => {
           </Grid>
 
           {/* Additional Information */}
-          <Card sx={{ mb: 4, maxWidth: 900, mx: 'auto' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>
-                💡 Pro Tips
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                    <WarningIcon color="warning" />
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Understanding Debts
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        The Debts page tracks money you owe to others (not loans). Visit the Debts page for detailed instructions on how it works.
-                      </Typography>
+          <Box sx={{ mb: 4, maxWidth: 900, mx: 'auto' }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>
+                  💡 Pro Tips
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                      <WarningIcon color="warning" />
+                      <Box>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Understanding Debts
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          The Debts page tracks money you owe to others (not loans). Visit the Debts page for detailed instructions on how it works.
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                    <AssessmentIcon color="info" />
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Check Your Statistics
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Once you start using the app, visit the Statistics page regularly to see your financial trends and insights.
-                      </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                      <AssessmentIcon color="info" />
+                      <Box>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Check Your Statistics
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Once you start using the app, visit the Statistics page regularly to see your financial trends and insights.
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Box>
         </Box>
       </Layout>
     );

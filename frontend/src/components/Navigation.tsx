@@ -41,7 +41,7 @@ const Navigation = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
     { text: 'Expenses', icon: <Receipt />, path: '/expenses' },
-    { text: 'Payment Methods', icon: <AccountBalance />, path: '/payment-methods' },
+    { text: 'Wallet', icon: <AccountBalance />, path: '/payment-methods' },
     { text: 'Debts', icon: <People />, path: '/debts' },
     { text: 'Loans', icon: <CreditCard />, path: '/loans' },
     { text: 'Income', icon: <TrendingUp />, path: '/income' },

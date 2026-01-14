@@ -1,15 +1,16 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+from fastapi import APIRouter, HTTPException, Query
+from typing import List, Optional
 from uuid import UUID
 from decimal import Decimal
 from datetime import date
 
 from database import SupabaseRepository, adjust_account_balance
-from models import Loan, LoanCreate, LoanSummary, LoanDisbursement, LoanDisbursementCreate
+from models import Loan, LoanCreate, LoanSummary, LoanDisbursement, LoanDisbursementCreate, LoanDisbursementWithTag
 
 router = APIRouter()
 loans_repo = SupabaseRepository("loans")
 disbursements_repo = SupabaseRepository("loan_disbursements")
+tags_repo = SupabaseRepository("tags")
 
 @router.post("/", response_model=Loan)
 async def create_loan(loan: LoanCreate):
@@ -120,7 +121,7 @@ async def delete_loan(loan_id: UUID):
 
 # Disbursement Routes
 @router.post("/{loan_id}/disbursements", response_model=LoanDisbursement)
-async def create_disbursement(loan_id: UUID, disbursement: LoanDisbursementCreate, account_id: str = None):
+async def create_disbursement(loan_id: UUID, disbursement: LoanDisbursementCreate, account_id: Optional[str] = Query(None)):
     """Create a new loan disbursement"""
     try:
         # Validate loan exists
@@ -148,15 +149,19 @@ async def create_disbursement(loan_id: UUID, disbursement: LoanDisbursementCreat
             "loan_id": str(loan_id),
             "user_id": str(disbursement.user_id),
             "amount": float(disbursement.amount),
-            "category": disbursement.category or "",
+            "tag_id": str(disbursement.tag_id) if disbursement.tag_id else None,
             "notes": disbursement.notes or "",
             "disbursement_date": disbursement_date.strftime('%Y-%m-%d'),
         }
         
         result = await disbursements_repo.create(disbursement_data)
         
-        # Update account balance for personal disbursements
-        if account_id and disbursement.category in ['Personal', 'Other']:
+        # Update loan's taken_amount
+        new_taken_amount = taken_amount + float(disbursement.amount)
+        await loans_repo.update(str(loan_id), {"taken_amount": new_taken_amount}, "loan_id")
+        
+        # Update account balance for personal disbursements (if account_id provided)
+        if account_id:
             await adjust_account_balance(account_id, float(disbursement.amount), "add")
         
         return LoanDisbursement(**result)
@@ -165,7 +170,7 @@ async def create_disbursement(loan_id: UUID, disbursement: LoanDisbursementCreat
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/{loan_id}/disbursements", response_model=List[LoanDisbursement])
+@router.get("/{loan_id}/disbursements", response_model=List[LoanDisbursementWithTag])
 async def get_disbursements(loan_id: UUID):
     """Get all disbursements for a loan"""
     try:
@@ -175,7 +180,24 @@ async def get_disbursements(loan_id: UUID):
         # Sort by disbursement_date descending
         results.sort(key=lambda x: x.get('disbursement_date', ''), reverse=True)
         
-        return [LoanDisbursement(**result) for result in results]
+        # Enrich with tag names
+        enriched_results = []
+        for result in results:
+            disbursement_data = result.copy()
+            
+            # Add tag name
+            if result.get('tag_id'):
+                try:
+                    tag = await tags_repo.get_by_id(result['tag_id'], "tag_id")
+                    disbursement_data['tag_name'] = tag['name'] if tag else None
+                except:
+                    disbursement_data['tag_name'] = None
+            else:
+                disbursement_data['tag_name'] = None
+            
+            enriched_results.append(LoanDisbursementWithTag(**disbursement_data))
+        
+        return enriched_results
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -207,24 +229,21 @@ async def update_disbursement(disbursement_id: UUID, disbursement_update: LoanDi
                 detail=f"Updated amount exceeds remaining loan limit. Remaining: ${remaining:.2f}"
             )
         
-        # Handle balance adjustments based on category changes
+        # Calculate difference in amount to update loan's taken_amount
         original_amount = float(original_disbursement.get('amount', 0))
-        original_category = original_disbursement.get('category', '')
         new_amount = float(disbursement_update.amount)
-        new_category = disbursement_update.category or ''
+        amount_difference = new_amount - original_amount
         
-        personal_categories = ['Personal', 'Emergency', 'Investment', 'Other']
-        original_was_personal = original_category in personal_categories
-        new_is_personal = new_category in personal_categories
-        
-        # For now, we'll handle the balance adjustments on the frontend
-        # since we don't store which account was originally credited
+        # Update loan's taken_amount
+        current_taken = float(loan.get('taken_amount', 0))
+        new_taken_amount = current_taken + amount_difference
+        await loans_repo.update(original_disbursement['loan_id'], {"taken_amount": new_taken_amount}, "loan_id")
         
         disbursement_date = disbursement_update.disbursement_date or date.today()
         
         update_data = {
             "amount": float(disbursement_update.amount),
-            "category": disbursement_update.category or "",
+            "tag_id": str(disbursement_update.tag_id) if disbursement_update.tag_id else None,
             "notes": disbursement_update.notes or "",
             "disbursement_date": disbursement_date.strftime('%Y-%m-%d'),
         }
@@ -244,6 +263,16 @@ async def delete_disbursement(disbursement_id: UUID):
         disbursement = await disbursements_repo.get_by_id(str(disbursement_id), "disbursement_id")
         if not disbursement:
             raise HTTPException(status_code=404, detail="Disbursement not found")
+        
+        loan_id = disbursement.get('loan_id')
+        disbursement_amount = float(disbursement.get('amount', 0))
+        
+        # Get loan to update taken_amount
+        loan = await loans_repo.get_by_id(loan_id, "loan_id")
+        if loan:
+            current_taken = float(loan.get('taken_amount', 0))
+            new_taken_amount = max(0, current_taken - disbursement_amount)
+            await loans_repo.update(loan_id, {"taken_amount": new_taken_amount}, "loan_id")
         
         # Note: We don't automatically refund accounts on disbursement deletion
         # as we don't track which account was credited

@@ -100,7 +100,7 @@ const PaymentMethodsPage = () => {
       const response = await accountApi.getAll(user.id);
       setAccounts(response.data || []);
     } catch (error) {
-      showNotification('Failed to load payment methods', 'error');
+      showNotification('Failed to load accounts', 'error');
     } finally {
       setLoading(false);
     }
@@ -134,7 +134,7 @@ const PaymentMethodsPage = () => {
     });
   };
 
-  // Handle add payment method
+  // Handle add account
   const handleAddSubmit = async () => {
     if (!user?.id) return;
     
@@ -156,12 +156,12 @@ const PaymentMethodsPage = () => {
         balance: balance,
       });
 
-      showNotification('Payment method added successfully', 'success');
+      showNotification('Account added successfully', 'success');
       setOpenAddModal(false);
       resetAddForm();
       loadAccounts();
     } catch (error) {
-      showNotification('Failed to add payment method', 'error');
+      showNotification('Failed to add account', 'error');
     }
   };
 
@@ -196,15 +196,15 @@ const PaymentMethodsPage = () => {
     }
   };
 
-  // Handle delete payment method
+  // Handle delete account
   const handleDelete = async (account: Account) => {
     if (window.confirm(`Are you sure you want to delete "${account.account_name}"? This action cannot be undone.`)) {
       try {
         await accountApi.delete(account.account_id);
-        showNotification('Payment method deleted successfully', 'success');
+        showNotification('Account deleted successfully', 'success');
         loadAccounts();
       } catch (error) {
-        showNotification('Failed to delete payment method', 'error');
+        showNotification('Failed to delete account', 'error');
       }
     }
   };
@@ -317,7 +317,7 @@ const PaymentMethodsPage = () => {
           <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress size={60} sx={{ mb: 2 }} />
             <Typography variant="h6" color="text.secondary">
-              Loading payment methods...
+              Loading accounts...
             </Typography>
           </Box>
         </Layout>
@@ -332,7 +332,7 @@ const PaymentMethodsPage = () => {
           {/* Header */}
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
             <Typography variant="h4" component="h1">
-              Payment Methods
+              Wallet
             </Typography>
             <Box>
               <Button
@@ -349,7 +349,7 @@ const PaymentMethodsPage = () => {
                 startIcon={<AddIcon />}
                 onClick={() => setOpenAddModal(true)}
               >
-                Add Payment Method
+                Add Account
               </Button>
             </Box>
           </Box>
@@ -372,7 +372,7 @@ const PaymentMethodsPage = () => {
                 <Grid item xs={12} sm={4}>
                   <Box textAlign="center">
                     <Typography variant="h6" gutterBottom>
-                      Payment Methods
+                      Accounts
                     </Typography>
                     <Typography variant="h4">
                       {accounts.length}
@@ -399,7 +399,7 @@ const PaymentMethodsPage = () => {
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Search payment methods..."
+                placeholder="Search accounts..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -409,12 +409,12 @@ const PaymentMethodsPage = () => {
             </Box>
           )}
 
-          {/* Payment Methods Table */}
+          {/* Accounts Table */}
           {getFilteredAccounts().length === 0 ? (
             <EmptyState
-              title={searchTerm ? "No Payment Methods Found" : "No Payment Methods Added"}
-              description={searchTerm ? "No payment methods match your search." : "Add your first payment method to get started."}
-              actionLabel="Add Payment Method"
+              title={searchTerm ? "No Accounts Found" : "No Accounts Added"}
+              description={searchTerm ? "No accounts match your search." : "Add your first account to get started."}
+              actionLabel="Add Account"
               onAction={() => setOpenAddModal(true)}
               icon={<AccountBalance sx={{ fontSize: 40, color: 'grey.400' }} />}
             />
@@ -425,7 +425,6 @@ const PaymentMethodsPage = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell align="right">Balance</TableCell>
-                    <TableCell align="right">Type</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -445,11 +444,6 @@ const PaymentMethodsPage = () => {
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" textTransform="capitalize">
-                          Payment Method
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
                         <IconButton
                           size="small"
                           onClick={() => openEditBalance(account)}
@@ -461,7 +455,7 @@ const PaymentMethodsPage = () => {
                           size="small"
                           onClick={() => handleDelete(account)}
                           color="error"
-                          title="Delete Payment Method"
+                          title="Delete Account"
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -473,15 +467,15 @@ const PaymentMethodsPage = () => {
             </TableContainer>
           )}
 
-          {/* Add Payment Method Modal */}
+          {/* Add Account Modal */}
           <Dialog open={openAddModal} onClose={() => setOpenAddModal(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Add New Payment Method</DialogTitle>
+            <DialogTitle>Add New Account</DialogTitle>
             <DialogContent>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Payment Method Name"
+                    label="Account Name"
                     placeholder="e.g., Chase Credit Card, Cash, Savings Account"
                     value={addFormData.account_name}
                     onChange={(e) => setAddFormData({ ...addFormData, account_name: e.target.value })}
@@ -510,7 +504,7 @@ const PaymentMethodsPage = () => {
                 Cancel
               </Button>
               <Button onClick={handleAddSubmit} variant="contained">
-                Add Payment Method
+                Add Account
               </Button>
             </DialogActions>
           </Dialog>
@@ -552,7 +546,7 @@ const PaymentMethodsPage = () => {
 
           {/* Transfer Modal */}
           <Dialog open={openTransferModal} onClose={() => setOpenTransferModal(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Transfer Between Payment Methods</DialogTitle>
+            <DialogTitle>Transfer Between Accounts</DialogTitle>
             <DialogContent>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12}>

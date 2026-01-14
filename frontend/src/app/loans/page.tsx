@@ -43,8 +43,6 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CalendarMonth as CalendarIcon,
-  TableView as TableIcon,
   AccountBalance as AccountBalanceIcon,
   TrendingUp as TrendingUpIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -77,7 +75,6 @@ export default function LoansPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const [disbursementType, setDisbursementType] = useState<'personal' | 'external'>('personal');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -100,7 +97,6 @@ export default function LoansPage() {
 
   const [disbursementFormData, setDisbursementFormData] = useState({
     amount: '',
-    category: '',
     notes: '',
     disbursement_date: format(new Date(), 'yyyy-MM-dd'),
     account_id: '',
@@ -364,15 +360,33 @@ export default function LoansPage() {
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton size="small" onClick={(e) => {
+                            <IconButton size="small" onClick={async (e) => {
                               e.stopPropagation();
-                              // Handle edit
+                              setEditingLoan(loan);
+                              setLoanFormData({
+                                loan_name: loan.loan_name || '',
+                                total_amount: loan.total_amount.toString(),
+                                taken_amount: loan.taken_amount.toString(),
+                              });
+                              setOpenLoanModal(true);
                             }}>
                               <EditIcon />
                             </IconButton>
-                            <IconButton size="small" color="error" onClick={(e) => {
+                            <IconButton size="small" color="error" onClick={async (e) => {
                               e.stopPropagation();
-                              // Handle delete
+                              if (window.confirm(`Are you sure you want to delete "${loan.loan_name || 'this loan'}"? This will also delete all associated disbursements.`)) {
+                                try {
+                                  await loanApi.delete(loan.loan_id);
+                                  showNotification('Loan deleted successfully!', 'success');
+                                  await loadLoans();
+                                  if (selectedLoan?.loan_id === loan.loan_id) {
+                                    setSelectedLoan(null);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to delete loan:', error);
+                                  showNotification('Failed to delete loan', 'error');
+                                }
+                              }
                             }}>
                               <DeleteIcon />
                             </IconButton>
@@ -381,12 +395,12 @@ export default function LoansPage() {
                         <Box sx={{ mb: 1 }}>
                           <LinearProgress 
                             variant="determinate" 
-                            value={0} // Calculate progress
+                            value={loan.total_amount > 0 ? (loan.taken_amount / loan.total_amount) * 100 : 0}
                             sx={{ height: 8, borderRadius: 4 }}
                           />
                         </Box>
                         <Typography variant="caption" color="text.secondary">
-                          0% utilized
+                          {loan.total_amount > 0 ? ((loan.taken_amount / loan.total_amount) * 100).toFixed(1) : 0}% utilized
                         </Typography>
                       </CardContent>
                     </Card>
@@ -425,7 +439,7 @@ export default function LoansPage() {
                         <TrendingUpIcon color="info" />
                         <Box>
                           <Typography variant="h6" color="info.main">
-                            ${formatCurrency(0)} {/* Calculate total disbursed */}
+                            ${formatCurrency(selectedLoan.taken_amount)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Total Disbursed
@@ -442,7 +456,7 @@ export default function LoansPage() {
                         <CreditCardIcon color="success" />
                         <Box>
                           <Typography variant="h6" color="success.main">
-                            ${formatCurrency(selectedLoan.total_amount)} {/* Calculate remaining */}
+                            ${formatCurrency(selectedLoan.remaining_amount)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Remaining
@@ -457,16 +471,16 @@ export default function LoansPage() {
                     <CardContent>
                       <Box>
                         <Typography variant="subtitle2" gutterBottom>
-                          Progress
+                          Utilisation
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LinearProgress 
                             variant="determinate" 
-                            value={0} // Calculate progress
+                            value={selectedLoan.total_amount > 0 ? (selectedLoan.taken_amount / selectedLoan.total_amount) * 100 : 0}
                             sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
                           />
                           <Typography variant="body2" color="text.secondary">
-                            0%
+                            {selectedLoan.total_amount > 0 ? ((selectedLoan.taken_amount / selectedLoan.total_amount) * 100).toFixed(1) : 0}%
                           </Typography>
                         </Box>
                       </Box>
@@ -495,21 +509,6 @@ export default function LoansPage() {
                       </IconButton>
                     </Box>
 
-                    {/* View Mode Toggle */}
-                    <ToggleButtonGroup
-                      value={viewMode}
-                      exclusive
-                      onChange={(_, newMode) => newMode && setViewMode(newMode)}
-                      size="small"
-                    >
-                      <ToggleButton value="table">
-                        <TableIcon />
-                      </ToggleButton>
-                      <ToggleButton value="calendar">
-                        <CalendarIcon />
-                      </ToggleButton>
-                    </ToggleButtonGroup>
-
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
@@ -521,15 +520,13 @@ export default function LoansPage() {
                 </Box>
 
                 {/* Table View */}
-                {viewMode === 'table' && (
-                  <TableContainer>
+                <TableContainer>
                     <Table>
                       <TableHead>
                         <TableRow>
                           <TableCell>Date</TableCell>
                           <TableCell>Amount</TableCell>
                           <TableCell>Category</TableCell>
-                          <TableCell>Type</TableCell>
                           <TableCell>Notes</TableCell>
                           <TableCell align="center">Actions</TableCell>
                         </TableRow>
@@ -537,7 +534,7 @@ export default function LoansPage() {
                       <TableBody>
                         {disbursements.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} align="center">
+                            <TableCell colSpan={5} align="center">
                               <EmptyState
                                 title="No Disbursements Found"
                                 description="Start tracking your loan disbursements by adding the first one."
@@ -559,21 +556,15 @@ export default function LoansPage() {
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                {entry.tag_name && (
+                                {entry.tag_name ? (
                                   <Chip 
                                     label={entry.tag_name} 
-                                    size="small" 
+                                    size="small"
                                     variant="outlined"
-                                    color="primary"
                                   />
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">-</Typography>
                                 )}
-                              </TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label="Personal" 
-                                  size="small"
-                                  color="success"
-                                />
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" color="text.secondary">
@@ -587,7 +578,25 @@ export default function LoansPage() {
                                       size="small"
                                       color="primary"
                                       onClick={() => {
-                                        // Handle edit
+                                        setEditingDisbursement(entry);
+                                        setDisbursementFormData({
+                                          amount: entry.amount.toString(),
+                                          notes: entry.notes || '',
+                                          disbursement_date: entry.disbursement_date || format(new Date(), 'yyyy-MM-dd'),
+                                          account_id: '',
+                                        });
+                                        if (entry.tag_id && entry.tag_name) {
+                                          setSelectedTag({
+                                            tag_id: entry.tag_id,
+                                            name: entry.tag_name,
+                                            type: disbursementType === 'personal' ? 'InternalLoan' : 'ExternalLoan',
+                                            user_id: user.id,
+                                            created_at: '',
+                                          });
+                                        } else {
+                                          setSelectedTag(null);
+                                        }
+                                        setOpenDisbursementModal(true);
                                       }}
                                     >
                                       <EditIcon />
@@ -597,8 +606,17 @@ export default function LoansPage() {
                                     <IconButton
                                       size="small"
                                       color="error"
-                                      onClick={() => {
-                                        // Handle delete
+                                      onClick={async () => {
+                                        if (window.confirm(`Are you sure you want to delete this disbursement of $${formatCurrency(entry.amount)}?`)) {
+                                          try {
+                                            await loanDisbursementApi.delete(entry.disbursement_id);
+                                            showNotification('Disbursement deleted successfully!', 'success');
+                                            await Promise.all([loadLoans(), loadDisbursements()]);
+                                          } catch (error) {
+                                            console.error('Failed to delete disbursement:', error);
+                                            showNotification('Failed to delete disbursement', 'error');
+                                          }
+                                        }
                                       }}
                                     >
                                       <DeleteIcon />
@@ -612,16 +630,6 @@ export default function LoansPage() {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                )}
-
-                {/* Calendar View */}
-                {viewMode === 'calendar' && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                      Calendar view coming soon...
-                    </Typography>
-                  </Box>
-                )}
               </Paper>
             </>
           )}
@@ -719,6 +727,15 @@ export default function LoansPage() {
                     
                     // Reload data
                     await loadLoans();
+                    
+                    // Update selected loan if it was the one edited
+                    if (editingLoan && selectedLoan?.loan_id === editingLoan.loan_id) {
+                      const updatedLoans = await loanApi.getAll(user!.id);
+                      const updatedLoan = updatedLoans.data?.find(l => l.loan_id === editingLoan.loan_id);
+                      if (updatedLoan) {
+                        setSelectedLoan(updatedLoan);
+                      }
+                    }
                   } catch (error) {
                     console.error('Failed to save loan:', error);
                     showNotification('Failed to save loan', 'error');
@@ -780,32 +797,29 @@ export default function LoansPage() {
                 </Grid>
                 
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Category</InputLabel>
-                    <Select
-                      value={disbursementFormData.category}
-                      label="Category"
-                      onChange={(e) => setDisbursementFormData({ ...disbursementFormData, category: e.target.value })}
-                    >
-                      <MenuItem value="">Select Category</MenuItem>
-                      <MenuItem value="Personal">Personal</MenuItem>
-                      <MenuItem value="Emergency">Emergency</MenuItem>
-                      <MenuItem value="Investment">Investment</MenuItem>
-                      <MenuItem value="Other">Other</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <TagSelector
+                    userId={user.id}
+                    tagType={disbursementType === 'personal' ? 'InternalLoan' : 'ExternalLoan'}
+                    selectedTagId={selectedTag?.tag_id}
+                    selectedTagName={selectedTag?.name}
+                    onTagSelect={setSelectedTag}
+                    label="Category"
+                    placeholder="Select or create a category"
+                    required
+                    size="medium"
+                  />
                 </Grid>
 
                 {disbursementType === 'personal' && (
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth required>
-                      <InputLabel>Payment Method</InputLabel>
+                      <InputLabel>Account</InputLabel>
                       <Select
                         value={disbursementFormData.account_id}
-                        label="Payment Method"
+                        label="Account"
                         onChange={(e) => setDisbursementFormData({ ...disbursementFormData, account_id: e.target.value })}
                       >
-                        <MenuItem value="">Select Payment Method</MenuItem>
+                        <MenuItem value="">Select Account</MenuItem>
                         {accounts.map(account => (
                           <MenuItem key={account.account_id} value={account.account_id}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
@@ -836,13 +850,12 @@ export default function LoansPage() {
               <Button onClick={() => {
                 setOpenDisbursementModal(false);
                 setEditingDisbursement(null);
-                setDisbursementFormData({
-                  amount: '',
-                  category: '',
-                  notes: '',
-                  disbursement_date: format(new Date(), 'yyyy-MM-dd'),
-                  account_id: '',
-                });
+                    setDisbursementFormData({
+                      amount: '',
+                      notes: '',
+                      disbursement_date: format(new Date(), 'yyyy-MM-dd'),
+                      account_id: '',
+                    });
               }}>
                 Cancel
               </Button>
@@ -859,13 +872,23 @@ export default function LoansPage() {
                       return;
                     }
 
+                    if (!selectedTag) {
+                      showNotification('Please select a category', 'error');
+                      return;
+                    }
+
+                    if (disbursementType === 'personal' && !disbursementFormData.account_id) {
+                      showNotification('Please select an account for personal disbursement', 'error');
+                      return;
+                    }
+
                     const disbursementData = {
                       loan_id: selectedLoan.loan_id,
                       user_id: user!.id,
                       amount: parseFloat(disbursementFormData.amount),
                       notes: disbursementFormData.notes,
                       disbursement_date: disbursementFormData.disbursement_date,
-                      tag_id: selectedTag?.tag_id,
+                      tag_id: selectedTag.tag_id,
                     };
 
                     if (editingDisbursement) {
@@ -874,17 +897,17 @@ export default function LoansPage() {
                       showNotification('Disbursement updated successfully!', 'success');
                     } else {
                       // Create new disbursement
-                      await loanDisbursementApi.create({
-                        ...disbursementData,
-                        account_id: disbursementType === 'personal' ? disbursementFormData.account_id : undefined,
-                      });
+                      const createData: any = { ...disbursementData };
+                      if (disbursementType === 'personal' && disbursementFormData.account_id) {
+                        createData.account_id = disbursementFormData.account_id;
+                      }
+                      await loanDisbursementApi.create(createData);
                       showNotification('Disbursement added successfully!', 'success');
                     }
 
                     // Reset form and close modal
                     setDisbursementFormData({
                       amount: '',
-                      category: '',
                       notes: '',
                       disbursement_date: format(new Date(), 'yyyy-MM-dd'),
                       account_id: '',
@@ -894,7 +917,16 @@ export default function LoansPage() {
                     setOpenDisbursementModal(false);
                     
                     // Reload data
-                    await loadDisbursements();
+                    await Promise.all([loadLoans(), loadDisbursements()]);
+                    
+                    // Update selected loan after disbursement operations
+                    if (selectedLoan) {
+                      const updatedLoans = await loanApi.getAll(user!.id);
+                      const updatedLoan = updatedLoans.data?.find(l => l.loan_id === selectedLoan.loan_id);
+                      if (updatedLoan) {
+                        setSelectedLoan(updatedLoan);
+                      }
+                    }
                   } catch (error) {
                     console.error('Failed to save disbursement:', error);
                     showNotification('Failed to save disbursement', 'error');

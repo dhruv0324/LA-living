@@ -30,8 +30,6 @@ import {
   LinearProgress,
   Tooltip,
   Paper,
-  Tabs,
-  Tab,
   InputAdornment,
 } from '@mui/material';
 import {
@@ -42,8 +40,9 @@ import {
   AttachMoney as MoneyIcon,
   Search as SearchIcon,
   CheckCircle as CheckIcon,
-  Cancel as CancelIcon,
   AccountBalance as AccountIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 
@@ -75,11 +74,6 @@ interface DebtSummary {
   debts_count: number;
 }
 
-interface SectionMembership {
-  person_id: string;
-  type: 'owed_to_me' | 'i_owe';
-}
-
 export default function DebtsPage() {
   const { user } = useAuth();
   
@@ -89,29 +83,19 @@ export default function DebtsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [debtSummary, setDebtSummary] = useState<DebtSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
-  const [sectionsLoaded, setSectionsLoaded] = useState(false);
 
   // Modal states
   const [openPersonModal, setOpenPersonModal] = useState(false);
   const [openDebtModal, setOpenDebtModal] = useState(false);
   const [openSettleModal, setOpenSettleModal] = useState(false);
-  const [openSelectPersonModal, setOpenSelectPersonModal] = useState(false);
+  const [openSettleAllModal, setOpenSettleAllModal] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [settlingDebt, setSettlingDebt] = useState<Debt | null>(null);
   const [settlingPerson, setSettlingPerson] = useState<Person | null>(null);
-  const [settlingPersonType, setSettlingPersonType] = useState<'OwedToMe' | 'IOwe' | null>(null);
-  const [selectingForSection, setSelectingForSection] = useState<'OwedToMe' | 'IOwe' | null>(null);
 
-  // Section membership tracking (persisted in localStorage)
-  const [debtorPeople, setDebtorPeople] = useState<string[]>([]);
-  const [creditorPeople, setCreditorPeople] = useState<string[]>([]);
-
-  // Search and performance
+  // Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAllPeople, setShowAllPeople] = useState(false);
-  const PEOPLE_DISPLAY_LIMIT = 20;
 
   // Form data
   const [personFormData, setPersonFormData] = useState({
@@ -123,12 +107,12 @@ export default function DebtsPage() {
     amount: '',
     type: 'OwedToMe' as 'OwedToMe' | 'IOwe',
     notes: '',
-    category: '',
     place: '',
-    debt_date: new Date().toISOString().split('T')[0], // Default to today
+    debt_date: new Date().toISOString().split('T')[0],
+    account_id: '',
   });
 
-  // Tag state (only used for creditors/IOwe debts)
+  // Tag state (required for IOwe debts)
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
 
   const [settlementData, setSettlementData] = useState({
@@ -146,44 +130,11 @@ export default function DebtsPage() {
     setNotification({ open: true, message, severity });
   };
 
-  // localStorage functions for section membership
-  const loadSectionMemberships = async () => {
-    // Ensure we're on the client side
-    if (typeof window === 'undefined') return;
-
-    try {
-      const debtors = localStorage.getItem(`debtors_${user?.id}`);
-      const creditors = localStorage.getItem(`creditors_${user?.id}`);
-      
-      if (debtors) {
-        setDebtorPeople(JSON.parse(debtors));
-      }
-      if (creditors) {
-        setCreditorPeople(JSON.parse(creditors));
-      }
-    } catch (error) {
-      console.error('Error loading section memberships:', error);
-    }
-  };
-
-  const saveSectionMemberships = async () => {
-    // Ensure we're on the client side
-    if (typeof window === 'undefined') return;
-
-    try {
-      localStorage.setItem(`debtors_${user?.id}`, JSON.stringify(debtorPeople));
-      localStorage.setItem(`creditors_${user?.id}`, JSON.stringify(creditorPeople));
-    } catch (error) {
-      console.error('Error saving section memberships:', error);
-    }
-  };
-
   // Data loading functions
   const loadPeople = async () => {
     if (!user?.id) return;
     
     try {
-
       const response = await peopleApi.getAll(user.id);
       setPeople(response.data || []);
     } catch (error) {
@@ -196,7 +147,7 @@ export default function DebtsPage() {
     if (!user?.id) return;
     
     try {
-      const response = await debtApi.getAll({ user_id: user.id });
+      const response = await debtApi.getAll({ user_id: user.id, is_settled: false });
       setDebts(response.data || []);
     } catch (error) {
       console.error('Failed to load debts:', error);
@@ -238,7 +189,6 @@ export default function DebtsPage() {
             loadDebts(),
             loadAccounts(),
             loadDebtSummary(),
-            loadSectionMemberships()
           ]);
         } catch (error) {
           console.error('Failed to load data:', error);
@@ -251,17 +201,234 @@ export default function DebtsPage() {
     }
   }, [user?.id]);
 
-  // Save section memberships when they change
-  useEffect(() => {
-    if (sectionsLoaded) {
-      saveSectionMemberships();
-    }
-  }, [debtorPeople, creditorPeople, sectionsLoaded]);
+  // Calculate totals for each person
+  const getPersonDebts = (personId: string) => {
+    return debts.filter(debt => debt.person_id === personId);
+  };
 
-  // Set mounted flag after initial load
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const getPersonTotal = (personId: string, type: 'OwedToMe' | 'IOwe') => {
+    const personDebts = getPersonDebts(personId);
+    return personDebts
+      .filter(debt => debt.type === type)
+      .reduce((sum, debt) => sum + parseFloat(debt.amount.toString()), 0);
+  };
+
+  // Filter debts by type
+  const debtorDebts = debts.filter(debt => debt.type === 'OwedToMe' && !debt.is_settled);
+  const creditorDebts = debts.filter(debt => debt.type === 'IOwe' && !debt.is_settled);
+
+  // Filter people by search
+  const filteredPeople = people.filter(person =>
+    person.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Handle person operations
+  const handleAddPerson = async () => {
+    try {
+      if (!personFormData.name.trim()) {
+        showNotification('Please enter a name', 'error');
+        return;
+      }
+
+      if (editingPerson) {
+        await peopleApi.update(editingPerson.person_id, {
+          user_id: user!.id,
+          name: personFormData.name.trim(),
+        });
+        showNotification('Person updated successfully!', 'success');
+      } else {
+        await peopleApi.create({
+          user_id: user!.id,
+          name: personFormData.name.trim(),
+        });
+        showNotification('Person added successfully!', 'success');
+      }
+
+      setPersonFormData({ name: '' });
+      setEditingPerson(null);
+      setOpenPersonModal(false);
+      await loadPeople();
+    } catch (error) {
+      console.error('Failed to save person:', error);
+      showNotification('Failed to save person', 'error');
+    }
+  };
+
+  const handleDeletePerson = async (person: Person) => {
+    if (window.confirm(`Are you sure you want to delete "${person.name}" and all their debt records? This action cannot be undone.`)) {
+      try {
+        await peopleApi.delete(person.person_id);
+        showNotification('Person and all debts deleted successfully!', 'success');
+        await Promise.all([loadPeople(), loadDebts(), loadDebtSummary()]);
+      } catch (error) {
+        console.error('Failed to delete person:', error);
+        showNotification('Failed to delete person', 'error');
+      }
+    }
+  };
+
+  const handleSettleAllForPerson = async () => {
+    if (!settlingPerson || !settlementData.account_id) {
+      showNotification('Please select a payment method', 'error');
+      return;
+    }
+
+    try {
+      const response = await debtApi.settleNet(settlingPerson.person_id, settlementData.account_id);
+      showNotification(response.data.message || 'All debts settled successfully!', 'success');
+      setOpenSettleAllModal(false);
+      setSettlingPerson(null);
+      setSettlementData({ account_id: '' });
+      await Promise.all([loadDebts(), loadDebtSummary(), loadAccounts()]);
+    } catch (error: any) {
+      console.error('Failed to settle debts:', error);
+      showNotification(error.response?.data?.detail || 'Failed to settle debts', 'error');
+    }
+  };
+
+  // Handle debt operations
+  const handleAddDebt = async () => {
+    try {
+      if (!debtFormData.person_id) {
+        showNotification('Please select a person', 'error');
+        return;
+      }
+
+      if (!debtFormData.amount || parseFloat(debtFormData.amount) <= 0) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+      }
+
+      // For OwedToMe debts, require account
+      if (debtFormData.type === 'OwedToMe') {
+        if (!debtFormData.account_id) {
+          showNotification('Please select an account for this debt', 'error');
+          return;
+        }
+      }
+
+      // For IOwe debts, require tag and place
+      if (debtFormData.type === 'IOwe') {
+        if (!selectedTag) {
+          showNotification('Please select a category (tag) for this debt', 'error');
+          return;
+        }
+        if (!debtFormData.place?.trim()) {
+          showNotification('Please enter a place for this debt', 'error');
+          return;
+        }
+      }
+
+      const debtData: any = {
+        person_id: debtFormData.person_id,
+        amount: parseFloat(debtFormData.amount),
+        type: debtFormData.type,
+        notes: debtFormData.notes,
+        debt_date: debtFormData.debt_date,
+        place: debtFormData.place || undefined,
+        tag_id: selectedTag?.tag_id,
+        is_settled: false,
+      };
+
+      // Add account_id for OwedToMe debts
+      if (debtFormData.type === 'OwedToMe' && debtFormData.account_id) {
+        debtData.account_id = debtFormData.account_id;
+      }
+
+      if (editingDebt) {
+        // For updates, include account_id if it's OwedToMe
+        if (debtFormData.type === 'OwedToMe' && debtFormData.account_id) {
+          debtData.account_id = debtFormData.account_id;
+        }
+        await debtApi.update(editingDebt.debt_id, debtData);
+        showNotification('Debt updated successfully!', 'success');
+      } else {
+        await debtApi.create(debtData);
+        showNotification('Debt added successfully!', 'success');
+      }
+
+      setDebtFormData({
+        person_id: '',
+        amount: '',
+        type: 'OwedToMe',
+        notes: '',
+        place: '',
+        debt_date: new Date().toISOString().split('T')[0],
+        account_id: '',
+      });
+      setSelectedTag(null);
+      setEditingDebt(null);
+      setOpenDebtModal(false);
+      await Promise.all([loadDebts(), loadDebtSummary(), loadAccounts()]);
+    } catch (error) {
+      console.error('Failed to save debt:', error);
+      showNotification('Failed to save debt', 'error');
+    }
+  };
+
+  const handleDeleteDebt = async (debt: Debt) => {
+    if (window.confirm(`Are you sure you want to delete this debt record?`)) {
+      try {
+        await debtApi.delete(debt.debt_id);
+        showNotification('Debt deleted successfully!', 'success');
+        await Promise.all([loadDebts(), loadDebtSummary()]);
+      } catch (error) {
+        console.error('Failed to delete debt:', error);
+        showNotification('Failed to delete debt', 'error');
+      }
+    }
+  };
+
+  const handleSettleDebt = async () => {
+    if (!settlingDebt || !settlementData.account_id) {
+      showNotification('Please select a payment method', 'error');
+      return;
+    }
+
+    try {
+      await debtApi.settle(settlingDebt.debt_id, settlementData.account_id);
+      showNotification('Debt settled successfully!', 'success');
+      setOpenSettleModal(false);
+      setSettlingDebt(null);
+      setSettlementData({ account_id: '' });
+      await Promise.all([loadDebts(), loadDebtSummary(), loadAccounts()]);
+    } catch (error: any) {
+      console.error('Failed to settle debt:', error);
+      showNotification(error.response?.data?.detail || 'Failed to settle debt', 'error');
+    }
+  };
+
+  const openEditDebtModal = (debt: Debt) => {
+    setEditingDebt(debt);
+    setDebtFormData({
+      person_id: debt.person_id,
+      amount: debt.amount.toString(),
+      type: debt.type,
+      notes: debt.notes || '',
+      place: debt.place || '',
+      debt_date: debt.debt_date || new Date().toISOString().split('T')[0],
+      account_id: (debt as any).account_id || '',
+    });
+    // Set tag if it exists
+    if (debt.tag_id && debt.tag_name) {
+      setSelectedTag({
+        tag_id: debt.tag_id,
+        name: debt.tag_name,
+        type: debt.type === 'IOwe' ? 'Expense' : 'Income',
+        user_id: user!.id,
+        created_at: '',
+      });
+    } else {
+      setSelectedTag(null);
+    }
+    setOpenDebtModal(true);
+  };
+
+  const openEditPersonModal = (person: Person) => {
+    setEditingPerson(person);
+    setPersonFormData({ name: person.name });
+    setOpenPersonModal(true);
+  };
 
   // Don't render if user is not available
   if (!user) {
@@ -280,55 +447,6 @@ export default function DebtsPage() {
             <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
               Track money owed to you and money you owe to others
             </Typography>
-
-            {/* Instructions Card */}
-            <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)', border: '1px solid #2196F3' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
-                  💡 How Debts Work
-                </Typography>
-                
-                {/* Workflow */}
-                <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
-                  📋 Workflow:
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                  1. Add a person to your contacts first<br />
-                  2.Add debts under their name as either creditor or debtor
-                </Typography>
-
-                {/* Creditor vs Debtor */}
-                <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
-                  👥 Understanding Roles:
-                </Typography>
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>•</Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        <strong>Creditors:</strong> People who are supposed to receive money from you
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>•</Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        <strong>Debtors:</strong> People who owe you money
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-
-                {/* Net Settlement */}
-                <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
-                  💰 Settlement Options:
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Settle debts individually or use net settlement for simplicity. All settled records are automatically registered in your income/expenses for easy tracking.
-                </Typography>
-              </CardContent>
-            </Card>
 
             {/* Summary Cards */}
             {debtSummary && (
@@ -393,7 +511,11 @@ export default function DebtsPage() {
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
-                onClick={() => setOpenPersonModal(true)}
+                onClick={() => {
+                  setEditingPerson(null);
+                  setPersonFormData({ name: '' });
+                  setOpenPersonModal(true);
+                }}
                 sx={{
                   background: 'linear-gradient(135deg, #14B8A6 0%, #0F766E 100%)',
                   '&:hover': {
@@ -401,12 +523,25 @@ export default function DebtsPage() {
                   },
                 }}
               >
-                Add Person
+                Add Friend
               </Button>
               <Button
                 variant="outlined"
                 startIcon={<MoneyIcon />}
-                onClick={() => setOpenDebtModal(true)}
+                onClick={() => {
+                  setEditingDebt(null);
+                  setDebtFormData({
+                    person_id: '',
+                    amount: '',
+                    type: 'OwedToMe',
+                    notes: '',
+                    place: '',
+                    debt_date: new Date().toISOString().split('T')[0],
+                    account_id: '',
+                  });
+                  setSelectedTag(null);
+                  setOpenDebtModal(true);
+                }}
                 sx={{
                   borderColor: 'primary.main',
                   color: 'primary.main',
@@ -429,54 +564,32 @@ export default function DebtsPage() {
                 Loading debt information...
               </Typography>
             </Box>
-          ) : people.length === 0 && debts.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <PersonIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h4" gutterBottom>
-                No Debt Data Available
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Start by adding your first contact and debt entry to begin tracking money owed to you or money you owe to others.
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setOpenPersonModal(true)}
-                size="large"
-              >
-                Add Your First Contact
-              </Button>
-            </Box>
           ) : (
             <Grid container spacing={3}>
               {/* People Section */}
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <Card>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        👥 People ({people.length})
+                        👥 Friends ({people.length})
                       </Typography>
-                      <Button
-                        size="small"
-                        onClick={() => setShowAllPeople(!showAllPeople)}
-                        sx={{ minWidth: 'auto' }}
-                      >
-                        {showAllPeople ? 'Show Less' : 'Show All'}
-                      </Button>
                     </Box>
 
                     {people.length === 0 ? (
                       <EmptyState
-                        title="No People Added"
-                        description="Start by adding people you owe money to or who owe you money."
-                        actionLabel="Add Person"
-                        onAction={() => setOpenPersonModal(true)}
+                        title="No Friends Added"
+                        description="Start by adding friends you owe money to or who owe you money."
+                        actionLabel="Add Friend"
+                        onAction={() => {
+                          setEditingPerson(null);
+                          setPersonFormData({ name: '' });
+                          setOpenPersonModal(true);
+                        }}
                         icon={<PersonIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
                       />
                     ) : (
                       <>
-                        {/* Search */}
                         <TextField
                           fullWidth
                           size="small"
@@ -493,108 +606,132 @@ export default function DebtsPage() {
                           sx={{ mb: 2 }}
                         />
 
-                        {/* People List */}
                         <List>
-                          {(showAllPeople ? people : people.slice(0, PEOPLE_DISPLAY_LIMIT))
-                            .filter(person => 
-                              person.name.toLowerCase().includes(searchTerm.toLowerCase())
-                            )
-                            .map((person) => (
+                          {filteredPeople.map((person) => {
+                            const owedToMe = getPersonTotal(person.person_id, 'OwedToMe');
+                            const iOwe = getPersonTotal(person.person_id, 'IOwe');
+                            const hasDebts = owedToMe > 0 || iOwe > 0;
+
+                            return (
                               <ListItem
                                 key={person.person_id}
                                 sx={{
                                   border: '1px solid',
                                   borderColor: 'divider',
-                                  borderRadius: 1,
-                                  mb: 1,
+                                  borderRadius: 2,
+                                  mb: 2,
+                                  p: 2,
                                   backgroundColor: 'background.paper',
+                                  flexDirection: 'column',
+                                  alignItems: 'stretch',
+                                  minHeight: 120,
                                 }}
                               >
-                                <ListItemText
-                                  primary={person.name}
-                                  secondary={
-                                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                      {debtorPeople.includes(person.person_id) && (
-                                        <Chip
-                                          label="Owed to Me"
-                                          size="small"
-                                          color="success"
-                                          variant="outlined"
-                                        />
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', mb: 1.5 }}>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
+                                      {person.name}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      {owedToMe > 0 && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <TrendingUpIcon sx={{ fontSize: 18, color: 'success.main' }} />
+                                          <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
+                                            Owed to you: ${formatCurrency(owedToMe)}
+                                          </Typography>
+                                        </Box>
                                       )}
-                                      {creditorPeople.includes(person.person_id) && (
-                                        <Chip
-                                          label="I Owe"
-                                          size="small"
-                                          color="error"
-                                          variant="outlined"
-                                        />
+                                      {iOwe > 0 && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <TrendingDownIcon sx={{ fontSize: 18, color: 'error.main' }} />
+                                          <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 500 }}>
+                                            You owe: ${formatCurrency(iOwe)}
+                                          </Typography>
+                                        </Box>
+                                      )}
+                                      {!hasDebts && (
+                                        <Typography variant="body2" color="text.secondary">
+                                          No debts
+                                        </Typography>
                                       )}
                                     </Box>
-                                  }
-                                />
-                                <ListItemSecondaryAction>
-                                  <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Tooltip title="Edit Person">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => {
-                                          setEditingPerson(person);
-                                          setOpenPersonModal(true);
-                                        }}
-                                      >
-                                        <EditIcon />
-                                      </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title="Delete Person">
-                                      <IconButton
-                                        size="small"
-                                        color="error"
-                                        onClick={() => {
-                                          // Handle delete
-                                        }}
-                                      >
-                                        <DeleteIcon />
-                                      </IconButton>
-                                    </Tooltip>
                                   </Box>
-                                </ListItemSecondaryAction>
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 1 }}>
+                                  {hasDebts && (
+                                    <Button
+                                      size="small"
+                                      variant="contained"
+                                      color="success"
+                                      onClick={() => {
+                                        setSettlingPerson(person);
+                                        setOpenSettleAllModal(true);
+                                      }}
+                                      sx={{ minWidth: 80 }}
+                                    >
+                                      Settle All
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<EditIcon />}
+                                    onClick={() => openEditPersonModal(person)}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="error"
+                                    startIcon={<DeleteIcon />}
+                                    onClick={() => handleDeletePerson(person)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </Box>
                               </ListItem>
-                            ))}
+                            );
+                          })}
                         </List>
-
-                        {people.length > PEOPLE_DISPLAY_LIMIT && !showAllPeople && (
-                          <Box sx={{ textAlign: 'center', mt: 2 }}>
-                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                              Showing {PEOPLE_DISPLAY_LIMIT} of {people.length} people
-                            </Typography>
-                          </Box>
-                        )}
                       </>
                     )}
                   </CardContent>
                 </Card>
               </Grid>
 
-              {/* Debts Section */}
-              <Grid item xs={12} md={6}>
+              {/* Debtors Section (Owed to Me) */}
+              <Grid item xs={12} md={4}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      💸 Debts ({debts.length})
+                      💚 Debtors - Owed to Me ({debtorDebts.length})
                     </Typography>
 
-                    {debts.length === 0 ? (
+                    {debtorDebts.length === 0 ? (
                       <EmptyState
-                        title="No Debts Recorded"
-                        description="Start tracking money owed to you or money you owe to others."
+                        title="No Debts Owed to You"
+                        description="When people owe you money, it will appear here."
                         actionLabel="Add Debt"
-                        onAction={() => setOpenDebtModal(true)}
-                        icon={<MoneyIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
+                        onAction={() => {
+                          setEditingDebt(null);
+                          setDebtFormData({
+                            person_id: '',
+                            amount: '',
+                            type: 'OwedToMe',
+                            notes: '',
+                            place: '',
+                            debt_date: new Date().toISOString().split('T')[0],
+                            account_id: '',
+                          });
+                          setSelectedTag(null);
+                          setOpenDebtModal(true);
+                        }}
+                        icon={<TrendingUpIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
                       />
                     ) : (
                       <List>
-                        {debts.map((debt) => (
+                        {debtorDebts.map((debt) => (
                           <ListItem
                             key={debt.debt_id}
                             sx={{
@@ -608,15 +745,9 @@ export default function DebtsPage() {
                             <ListItemText
                               primary={
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                  <Typography variant="body1" sx={{ fontWeight: 500, color: 'success.main' }}>
                                     ${formatCurrency(debt.amount)}
                                   </Typography>
-                                  <Chip
-                                    label={debt.type === 'OwedToMe' ? 'Owed to Me' : 'I Owe'}
-                                    size="small"
-                                    color={debt.type === 'OwedToMe' ? 'success' : 'error'}
-                                    variant="outlined"
-                                  />
                                 </Box>
                               }
                               secondary={
@@ -638,41 +769,157 @@ export default function DebtsPage() {
                               }
                             />
                             <ListItemSecondaryAction>
-                              <Box sx={{ display: 'flex', gap: 1 }}>
-                                <Tooltip title="Settle Debt">
-                                  <IconButton
-                                    size="small"
-                                    color="success"
-                                    onClick={() => {
-                                      setSettlingDebt(debt);
-                                      setOpenSettleModal(true);
-                                    }}
-                                  >
-                                    <CheckIcon />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Edit Debt">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => {
-                                      setEditingDebt(debt);
-                                      setOpenDebtModal(true);
-                                    }}
-                                  >
-                                    <EditIcon />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete Debt">
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => {
-                                      // Handle delete
-                                    }}
-                                  >
-                                    <DeleteIcon />
-                                  </IconButton>
-                                </Tooltip>
+                              <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  onClick={() => {
+                                    setSettlingDebt(debt);
+                                    setOpenSettleModal(true);
+                                  }}
+                                  sx={{ minWidth: 80, mb: 0.5 }}
+                                >
+                                  Settle
+                                </Button>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Edit Debt">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => openEditDebtModal(debt)}
+                                    >
+                                      <EditIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete Debt">
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      onClick={() => handleDeleteDebt(debt)}
+                                    >
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </Box>
+                            </ListItemSecondaryAction>
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              {/* Creditors Section (I Owe) */}
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                      🔴 Creditors - I Owe ({creditorDebts.length})
+                    </Typography>
+
+                    {creditorDebts.length === 0 ? (
+                      <EmptyState
+                        title="No Debts You Owe"
+                        description="When you owe money to others, it will appear here."
+                        actionLabel="Add Debt"
+                        onAction={() => {
+                          setEditingDebt(null);
+                          setDebtFormData({
+                            person_id: '',
+                            amount: '',
+                            type: 'IOwe',
+                            notes: '',
+                            place: '',
+                            debt_date: new Date().toISOString().split('T')[0],
+                            account_id: '',
+                          });
+                          setSelectedTag(null);
+                          setOpenDebtModal(true);
+                        }}
+                        icon={<TrendingDownIcon sx={{ fontSize: 40, color: 'grey.400' }} />}
+                      />
+                    ) : (
+                      <List>
+                        {creditorDebts.map((debt) => (
+                          <ListItem
+                            key={debt.debt_id}
+                            sx={{
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              mb: 1,
+                              backgroundColor: 'background.paper',
+                            }}
+                          >
+                            <ListItemText
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body1" sx={{ fontWeight: 500, color: 'error.main' }}>
+                                    ${formatCurrency(debt.amount)}
+                                  </Typography>
+                                  {debt.tag_name && (
+                                    <Chip label={debt.tag_name} size="small" variant="outlined" />
+                                  )}
+                                </Box>
+                              }
+                              secondary={
+                                <Box>
+                                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    {people.find(p => p.person_id === debt.person_id)?.name || 'Unknown Person'}
+                                  </Typography>
+                                  {debt.place && (
+                                    <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                                      Place: {debt.place}
+                                    </Typography>
+                                  )}
+                                  {debt.notes && (
+                                    <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                                      {debt.notes}
+                                    </Typography>
+                                  )}
+                                  {debt.debt_date && (
+                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                      {format(parseISO(debt.debt_date), 'MMM dd, yyyy')}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              }
+                            />
+                            <ListItemSecondaryAction>
+                              <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  onClick={() => {
+                                    setSettlingDebt(debt);
+                                    setOpenSettleModal(true);
+                                  }}
+                                  sx={{ minWidth: 80, mb: 0.5 }}
+                                >
+                                  Settle
+                                </Button>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Edit Debt">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => openEditDebtModal(debt)}
+                                    >
+                                      <EditIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete Debt">
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      onClick={() => handleDeleteDebt(debt)}
+                                    >
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
                               </Box>
                             </ListItemSecondaryAction>
                           </ListItem>
@@ -686,9 +933,13 @@ export default function DebtsPage() {
           )}
 
           {/* Person Modal */}
-          <Dialog open={openPersonModal} onClose={() => setOpenPersonModal(false)} maxWidth="sm" fullWidth>
+          <Dialog open={openPersonModal} onClose={() => {
+            setOpenPersonModal(false);
+            setEditingPerson(null);
+            setPersonFormData({ name: '' });
+          }} maxWidth="sm" fullWidth>
             <DialogTitle>
-              {editingPerson ? 'Edit Person' : 'Add New Person'}
+              {editingPerson ? 'Edit Friend' : 'Add New Friend'}
             </DialogTitle>
             <DialogContent>
               <TextField
@@ -697,59 +948,42 @@ export default function DebtsPage() {
                 value={personFormData.name}
                 onChange={(e) => setPersonFormData({ ...personFormData, name: e.target.value })}
                 sx={{ mt: 2 }}
+                autoFocus
               />
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenPersonModal(false)}>Cancel</Button>
-              <Button variant="contained" onClick={async () => {
-                try {
-                  if (!personFormData.name.trim()) {
-                    showNotification('Please enter a name', 'error');
-                    return;
-                  }
-
-                  if (editingPerson) {
-                    // Update existing person
-                    await peopleApi.update(editingPerson.person_id, {
-                      user_id: user!.id,
-                      name: personFormData.name.trim(),
-                    });
-                    showNotification('Person updated successfully!', 'success');
-                  } else {
-                    // Create new person
-                    await peopleApi.create({
-                      user_id: user!.id,
-                      name: personFormData.name.trim(),
-                    });
-                    showNotification('Person added successfully!', 'success');
-                  }
-
-                  // Reset form and close modal
-                  setPersonFormData({ name: '' });
-                  setEditingPerson(null);
-                  setOpenPersonModal(false);
-                  
-                  // Reload data
-                  await loadPeople();
-                } catch (error) {
-                  console.error('Failed to save person:', error);
-                  showNotification('Failed to save person', 'error');
-                }
-              }}>
+              <Button onClick={() => {
+                setOpenPersonModal(false);
+                setEditingPerson(null);
+                setPersonFormData({ name: '' });
+              }}>Cancel</Button>
+              <Button variant="contained" onClick={handleAddPerson}>
                 {editingPerson ? 'Update' : 'Add'}
               </Button>
             </DialogActions>
           </Dialog>
 
           {/* Debt Modal */}
-          <Dialog open={openDebtModal} onClose={() => setOpenDebtModal(false)} maxWidth="sm" fullWidth>
+          <Dialog open={openDebtModal} onClose={() => {
+            setOpenDebtModal(false);
+            setEditingDebt(null);
+            setDebtFormData({
+              person_id: '',
+              amount: '',
+              type: 'OwedToMe',
+              notes: '',
+              place: '',
+              debt_date: new Date().toISOString().split('T')[0],
+            });
+            setSelectedTag(null);
+          }} maxWidth="sm" fullWidth>
             <DialogTitle>
               {editingDebt ? 'Edit Debt' : 'Add New Debt'}
             </DialogTitle>
             <DialogContent>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
                     <InputLabel>Person</InputLabel>
                     <Select
                       value={debtFormData.person_id}
@@ -771,14 +1005,23 @@ export default function DebtsPage() {
                     type="number"
                     value={debtFormData.amount}
                     onChange={(e) => setDebtFormData({ ...debtFormData, amount: e.target.value })}
+                    required
+                    inputProps={{ min: 0, step: 0.01 }}
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
                     <InputLabel>Type</InputLabel>
                     <Select
                       value={debtFormData.type}
-                      onChange={(e) => setDebtFormData({ ...debtFormData, type: e.target.value as 'OwedToMe' | 'IOwe' })}
+                      onChange={(e) => {
+                        const newType = e.target.value as 'OwedToMe' | 'IOwe';
+                        setDebtFormData({ ...debtFormData, type: newType, account_id: newType === 'OwedToMe' ? debtFormData.account_id : '' });
+                        // Clear tag when switching types
+                        if (newType === 'OwedToMe') {
+                          setSelectedTag(null);
+                        }
+                      }}
                       label="Type"
                     >
                       <MenuItem value="OwedToMe">Owed to Me</MenuItem>
@@ -786,6 +1029,55 @@ export default function DebtsPage() {
                     </Select>
                   </FormControl>
                 </Grid>
+                {debtFormData.type === 'OwedToMe' && (
+                  <Grid item xs={12}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Account</InputLabel>
+                      <Select
+                        value={debtFormData.account_id}
+                        onChange={(e) => setDebtFormData({ ...debtFormData, account_id: e.target.value })}
+                        label="Account"
+                      >
+                        <MenuItem value="">Select Account</MenuItem>
+                        {accounts.map((account) => (
+                          <MenuItem key={account.account_id} value={account.account_id}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                              <span>{account.account_name}</span>
+                              <span>${formatCurrency(account.balance)}</span>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+                {debtFormData.type === 'IOwe' && (
+                  <>
+                    <Grid item xs={12}>
+                      <TagSelector
+                        userId={user.id}
+                        tagType="Expense"
+                        selectedTagId={selectedTag?.tag_id}
+                        selectedTagName={selectedTag?.name}
+                        onTagSelect={setSelectedTag}
+                        label="Category"
+                        placeholder="Select or create a category"
+                        required
+                        size="medium"
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Place"
+                        value={debtFormData.place}
+                        onChange={(e) => setDebtFormData({ ...debtFormData, place: e.target.value })}
+                        required
+                        placeholder="Where is this debt from?"
+                      />
+                    </Grid>
+                  </>
+                )}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
@@ -809,72 +1101,44 @@ export default function DebtsPage() {
               </Grid>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenDebtModal(false)}>Cancel</Button>
-              <Button variant="contained" onClick={async () => {
-                try {
-                  if (!debtFormData.person_id) {
-                    showNotification('Please select a person', 'error');
-                    return;
-                  }
-
-                  if (!debtFormData.amount || parseFloat(debtFormData.amount) <= 0) {
-                    showNotification('Please enter a valid amount', 'error');
-                    return;
-                  }
-
-                  const debtData = {
-                    person_id: debtFormData.person_id,
-                    amount: parseFloat(debtFormData.amount),
-                    type: debtFormData.type,
-                    notes: debtFormData.notes,
-                    debt_date: debtFormData.debt_date,
-                    tag_id: selectedTag?.tag_id,
-                    is_settled: false,
-                  };
-
-                  if (editingDebt) {
-                    // Update existing debt
-                    await debtApi.update(editingDebt.debt_id, debtData);
-                    showNotification('Debt updated successfully!', 'success');
-                  } else {
-                    // Create new debt
-                    await debtApi.create(debtData);
-                    showNotification('Debt added successfully!', 'success');
-                  }
-
-                  // Reset form and close modal
-                  setDebtFormData({
-                    person_id: '',
-                    amount: '',
-                    type: 'OwedToMe',
-                    notes: '',
-                    category: '',
-                    place: '',
-                    debt_date: new Date().toISOString().split('T')[0],
-                  });
-                  setSelectedTag(null);
-                  setEditingDebt(null);
-                  setOpenDebtModal(false);
-                  
-                  // Reload data
-                  await Promise.all([loadDebts(), loadDebtSummary()]);
-                } catch (error) {
-                  console.error('Failed to save debt:', error);
-                  showNotification('Failed to save debt', 'error');
-                }
-              }}>
+              <Button onClick={() => {
+                setOpenDebtModal(false);
+                setEditingDebt(null);
+                setDebtFormData({
+                  person_id: '',
+                  amount: '',
+                  type: 'OwedToMe',
+                  notes: '',
+                  place: '',
+                  debt_date: new Date().toISOString().split('T')[0],
+                  account_id: '',
+                });
+                setSelectedTag(null);
+              }}>Cancel</Button>
+              <Button variant="contained" onClick={handleAddDebt}>
                 {editingDebt ? 'Update' : 'Add'}
               </Button>
             </DialogActions>
           </Dialog>
 
           {/* Settlement Modal */}
-          <Dialog open={openSettleModal} onClose={() => setOpenSettleModal(false)} maxWidth="sm" fullWidth>
+          <Dialog open={openSettleModal} onClose={() => {
+            setOpenSettleModal(false);
+            setSettlingDebt(null);
+            setSettlementData({ account_id: '' });
+          }} maxWidth="sm" fullWidth>
             <DialogTitle>Settle Debt</DialogTitle>
             <DialogContent>
+              {settlingDebt && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Settling ${formatCurrency(settlingDebt.amount)} with {people.find(p => p.person_id === settlingDebt.person_id)?.name || 'Unknown'}
+                  </Typography>
+                </Box>
+              )}
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
                     <InputLabel>Payment Method</InputLabel>
                     <Select
                       value={settlementData.account_id}
@@ -892,12 +1156,67 @@ export default function DebtsPage() {
               </Grid>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenSettleModal(false)}>Cancel</Button>
-              <Button variant="contained" onClick={() => {
-                // Handle settlement
+              <Button onClick={() => {
                 setOpenSettleModal(false);
-              }}>
+                setSettlingDebt(null);
+                setSettlementData({ account_id: '' });
+              }}>Cancel</Button>
+              <Button variant="contained" onClick={handleSettleDebt}>
                 Settle
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Settle All Modal */}
+          <Dialog open={openSettleAllModal} onClose={() => {
+            setOpenSettleAllModal(false);
+            setSettlingPerson(null);
+            setSettlementData({ account_id: '' });
+          }} maxWidth="sm" fullWidth>
+            <DialogTitle>Settle All Debts</DialogTitle>
+            <DialogContent>
+              {settlingPerson && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Settling all debts with {settlingPerson.name}
+                  </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2">
+                      Owed to you: ${formatCurrency(getPersonTotal(settlingPerson.person_id, 'OwedToMe'))}
+                    </Typography>
+                    <Typography variant="body2">
+                      You owe: ${formatCurrency(getPersonTotal(settlingPerson.person_id, 'IOwe'))}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Payment Method</InputLabel>
+                    <Select
+                      value={settlementData.account_id}
+                      onChange={(e) => setSettlementData({ ...settlementData, account_id: e.target.value })}
+                      label="Payment Method"
+                    >
+                      {accounts.map((account) => (
+                        <MenuItem key={account.account_id} value={account.account_id}>
+                          {account.account_name} (${formatCurrency(account.balance)})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => {
+                setOpenSettleAllModal(false);
+                setSettlingPerson(null);
+                setSettlementData({ account_id: '' });
+              }}>Cancel</Button>
+              <Button variant="contained" onClick={handleSettleAllForPerson}>
+                Settle All
               </Button>
             </DialogActions>
           </Dialog>
@@ -920,4 +1239,4 @@ export default function DebtsPage() {
       </Layout>
     </ProtectedRoute>
   );
-} 
+}

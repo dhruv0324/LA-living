@@ -35,13 +35,16 @@ import {
   CssBaseline,
 } from '@mui/material';
 import {
-  Add,
-  CalendarMonth,
-  TableChart,
-  Delete,
-  Edit,
-  ChevronLeft,
-  ChevronRight,
+  Add as AddIcon,
+  CalendarMonth as CalendarMonthIcon,
+  TableChart as TableChartIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  TrendingDown as TrendingDownIcon,
+  AccountBalance as AccountBalanceIcon,
+  Category as CategoryIcon,
 } from '@mui/icons-material';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, startOfWeek, endOfWeek, isSameMonth } from 'date-fns';
 import { expenseApi, accountApi, budgetApi, Expense, Account, BudgetSummary, Tag } from '@/lib/api';
@@ -153,7 +156,7 @@ const ExpensesPage = () => {
     place: '',
     account_id: '',
     notes: '',
-    expense_date: new Date(),
+    expense_date: format(new Date(), 'yyyy-MM-dd'),
   });
   
   // Tag state
@@ -305,7 +308,7 @@ const ExpensesPage = () => {
         payment_method: selectedAccount?.account_name || '',
         account_id: formData.account_id || undefined,
         notes: formData.notes,
-        expense_date: format(formData.expense_date, 'yyyy-MM-dd'),
+        expense_date: formData.expense_date,
         tag_id: selectedTag?.tag_id || undefined,
       };
 
@@ -341,7 +344,7 @@ const ExpensesPage = () => {
       place: expense.place || '',
       account_id: expense.account_id || '',
       notes: expense.notes || '',
-      expense_date: expense.expense_date ? parseISO(expense.expense_date) : new Date(),
+      expense_date: expense.expense_date || format(new Date(), 'yyyy-MM-dd'),
     });
     setSelectedTag(expense.tag_id && expense.tag_name ? {
       tag_id: expense.tag_id,
@@ -373,7 +376,7 @@ const ExpensesPage = () => {
       place: '',
       account_id: '',
       notes: '',
-      expense_date: new Date(),
+      expense_date: format(new Date(), 'yyyy-MM-dd'),
     });
     setSelectedTag(null);
   };
@@ -484,262 +487,283 @@ const ExpensesPage = () => {
             borderRadius: 3,
             background: 'linear-gradient(135deg, #F87171 0%, #DC2626 100%)',
             color: 'white',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
           }}>
-            <Box>
-              <Typography variant="h3" sx={{ 
-                fontWeight: 700,
-                textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}>
-                💸 Expenses
-              </Typography>
-              <Typography variant="subtitle1" sx={{ 
-                opacity: 0.9,
-                fontWeight: 400
-              }}>
-                Track your spending and stay on budget
-              </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Typography variant="h3" sx={{ 
+                  fontWeight: 700,
+                  textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                  💸 Expense Tracking
+                </Typography>
+                <Typography variant="subtitle1" sx={{ 
+                  opacity: 0.9,
+                  fontWeight: 400
+                }}>
+                  Monitor your spending and stay on budget
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setOpenModal(true)}
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1.5,
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.3)',
+                  }
+                }}
+              >
+                Add Expense
+              </Button>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setOpenModal(true)}
-              sx={{
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                color: 'white',
+            
+            {/* Month/Year Navigation */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+              <IconButton 
+                onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))} 
+                size="small"
+                sx={{ 
+                  color: 'white',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
+                }}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <Typography variant="h6" sx={{ 
+                minWidth: 180, 
+                textAlign: 'center',
+                fontWeight: 600,
+                backgroundColor: 'rgba(255,255,255,0.1)',
                 borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.3)',
-                }
-              }}
-            >
-              Add Expense
-            </Button>
+                py: 1,
+                px: 2,
+              }}>
+                {format(selectedMonth, 'MMMM yyyy')}
+              </Typography>
+              <IconButton 
+                onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))} 
+                size="small"
+                sx={{ 
+                  color: 'white',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
+                }}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </Box>
           </Box>
 
-          {/* Debug Information - Temporary */}
-
-        {/* Budget Summary */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Budget Summary - {format(selectedMonth, 'MMMM yyyy')}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  size="small"
-                  variant="text"
-                  onClick={() => loadBudgetSummary()}
-                >
-                  Refresh Budget
-                </Button>
-              </Box>
-            </Box>
-            
-
-            
-            {budgetSummary ? (
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="body2" color="textSecondary">
-                    Budget: ${formatCurrency(budgetSummary.budget?.amount || 0)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="body2" color="textSecondary">
-                    Spent: ${formatCurrency(budgetSummary.total_expenses || 0)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography 
-                    variant="body2" 
-                    color={parseFloat(String(budgetSummary.remaining_budget || '0')) >= 0 ? 'success.main' : 'error.main'}
-                  >
-                    Remaining: ${formatCurrency(budgetSummary.remaining_budget || 0)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            ) : (
-              <Typography variant="body2" color="textSecondary">
-                No budget set for this month. Create one to track your spending!
-              </Typography>
-            )}
-            </CardContent>
-          </Card>
-
-        {/* Month/Year Selector */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="h6">
-                <CalendarMonth sx={{ mr: 1 }} />
-                View Data For:
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {/* Arrow Navigation */}
-                <IconButton onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}>
-                  <ChevronLeft />
-                </IconButton>
-                
-                {/* Month/Year Pickers */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Month</InputLabel>
-                    <Select
-                      value={selectedMonth.getMonth()}
-                      label="Month"
-                      onChange={(e) => {
-                        const newDate = new Date(selectedMonth);
-                        newDate.setMonth(e.target.value as number);
-                        setSelectedMonth(newDate);
-                      }}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <MenuItem key={i} value={i}>
-                          {format(new Date(2024, i, 1), 'MMMM')}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  
-                  <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <InputLabel>Year</InputLabel>
-                    <Select
-                      value={selectedMonth.getFullYear()}
-                      label="Year"
-                      onChange={(e) => {
-                        const newDate = new Date(selectedMonth);
-                        newDate.setFullYear(e.target.value as number);
-                        setSelectedMonth(newDate);
-                      }}
-                    >
-                      {Array.from({ length: 10 }, (_, i) => {
-                        const year = new Date().getFullYear() - 3 + i;
-                        return (
-                          <MenuItem key={year} value={year}>
-                            {year}
-                          </MenuItem>
-                        );
-                      })}
-                    </Select>
-                  </FormControl>
-                </Box>
-                
-                <IconButton onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}>
-                  <ChevronRight />
-                </IconButton>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Tabs for Table and Calendar View */}
-        <Paper sx={{ mb: 3 }}>
-          <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-            <Tab icon={<TableChart />} label="Table View" />
-            <Tab icon={<CalendarMonth />} label="Calendar View" />
-          </Tabs>
-        </Paper>
-
-        {/* Table View */}
-        <TabPanel value={tabValue} index={0}>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Place</TableCell>
-                  <TableCell>Payment Method</TableCell>
-                  <TableCell>Notes</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  // Loading state
-                  Array.from({ length: rowsPerPage }, (_, index) => (
-                    <TableRow key={`loading-${index}`}>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
-                        {index === Math.floor(rowsPerPage / 2) ? 'Loading expenses...' : ''}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : expenses.length === 0 ? (
-                  // Empty state
-                  <TableRow>
-                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 8 }}>
-                      <Typography variant="body1" color="text.secondary">
-                        No expenses found for {format(selectedMonth, 'MMMM yyyy')}
+          {/* Summary Cards */}
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <TrendingDownIcon color="error" />
+                    <Box>
+                      <Typography variant="h6" color="error">
+                        ${formatCurrency(expenses.reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0))}
                       </Typography>
-                      <Button
-                        variant="outlined"
-                        startIcon={<Add />}
-                        onClick={() => setOpenModal(true)}
-                        sx={{ mt: 2 }}
-                      >
-                        Add Your First Expense
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  // Data rows
-                  expenses.map((expense) => (
-                    <TableRow key={expense.expense_id}>
-                      <TableCell>
-                        {expense.expense_date ? format(parseISO(expense.expense_date), 'MMM dd, yyyy') : '-'}
-                      </TableCell>
-                      <TableCell>
-                        ${typeof expense.amount === 'number' ? expense.amount.toFixed(2) : parseFloat(expense.amount || '0').toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        {expense.tag_name && (
-                          <Chip label={expense.tag_name} size="small" />
-                        )}
-                      </TableCell>
-                      <TableCell>{expense.place || '-'}</TableCell>
-                      <TableCell>{expense.payment_method || '-'}</TableCell>
-                      <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {expense.notes || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <IconButton size="small" onClick={() => handleEdit(expense)}>
-                          <Edit />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleDelete(expense.expense_id)}>
-                          <Delete />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={totalCount}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={(e, newPage) => setPage(newPage)}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-            />
-          </TableContainer>
-        </TabPanel>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Expenses
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <AddIcon color="info" />
+                    <Box>
+                      <Typography variant="h6" color="info.main">
+                        {expenses.length}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Expense Entries
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <AccountBalanceIcon color="warning" />
+                    <Box>
+                      <Typography variant="h6" color="warning.main">
+                        ${formatCurrency(expenses.length > 0 ? expenses.reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0) / expenses.length : 0)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Average Expense
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Budget Status
+                    </Typography>
+                    {budgetSummary ? (
+                      <Box>
+                        <Typography variant="h6" color={parseFloat(String(budgetSummary.remaining_budget || '0')) >= 0 ? 'success.main' : 'error.main'}>
+                          ${formatCurrency(Math.abs(budgetSummary.remaining_budget || 0))}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {parseFloat(String(budgetSummary.remaining_budget || '0')) >= 0 ? 'Remaining' : 'Over Budget'}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No budget set
+                      </Typography>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
 
-        {/* Calendar View */}
-        <TabPanel value={tabValue} index={1}>
-          {renderCalendarView()}
-        </TabPanel>
+          {/* Tabs for Table and Calendar View */}
+          <Paper sx={{ mb: 3 }}>
+            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+              <Tab icon={<TableChartIcon />} label="Table View" />
+              <Tab icon={<CalendarMonthIcon />} label="Calendar View" />
+            </Tabs>
+          </Paper>
+
+          {/* Table View */}
+          {tabValue === 0 && (
+            <Paper sx={{ mb: 3 }}>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Category</TableCell>
+                      <TableCell>Place</TableCell>
+                      <TableCell>Payment Method</TableCell>
+                      <TableCell>Notes</TableCell>
+                      <TableCell align="center">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Loading expenses...
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : expenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No expenses found for {format(selectedMonth, 'MMMM yyyy')}
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            startIcon={<AddIcon />}
+                            onClick={() => setOpenModal(true)}
+                            sx={{ mt: 2 }}
+                          >
+                            Add Your First Expense
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      expenses
+                        .sort((a, b) => parseISO(b.expense_date || '1970-01-01').getTime() - parseISO(a.expense_date || '1970-01-01').getTime())
+                        .map((expense) => (
+                          <TableRow key={expense.expense_id}>
+                            <TableCell>
+                              {expense.expense_date ? format(parseISO(expense.expense_date), 'MMM d, yyyy') : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="error" fontWeight="bold">
+                                -${formatCurrency(expense.amount)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {expense.tag_name && (
+                                <Chip label={expense.tag_name} size="small" variant="outlined" />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {expense.place || '-'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {expense.payment_method || '-'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary">
+                                {expense.notes || '-'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEdit(expense)}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDelete(expense.expense_id)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 25]}
+                  component="div"
+                  count={totalCount}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={(e, newPage) => setPage(newPage)}
+                  onRowsPerPageChange={(e) => {
+                    setRowsPerPage(parseInt(e.target.value, 10));
+                    setPage(0);
+                  }}
+                />
+              </TableContainer>
+            </Paper>
+          )}
+
+          {/* Calendar View */}
+          {tabValue === 1 && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              {renderCalendarView()}
+            </Paper>
+          )}
 
         {/* Add/Edit Expense Modal */}
         <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="md" fullWidth>
@@ -765,10 +789,10 @@ const ExpensesPage = () => {
                   label="Date"
                   type="date"
                   fullWidth
-                  value={format(formData.expense_date, 'yyyy-MM-dd')}
+                  value={formData.expense_date}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    expense_date: e.target.value ? new Date(e.target.value) : new Date() 
+                    expense_date: e.target.value 
                   })}
                   InputLabelProps={{ shrink: true }}
                 />
