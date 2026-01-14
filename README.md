@@ -178,19 +178,10 @@ The frontend will be available at `http://localhost:3000`
 
 The application is deployed on Render. Both frontend and backend services are configured via the `render.yaml` blueprint file in the repository root.
 
-### Environment Variables
-
-**Backend Service:**
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `GROQ_API_KEY`
-
-**Frontend Service:**
-- `NEXT_PUBLIC_API_URL` (should point to your backend service URL)
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 ## Usage Guide
+
+### You can use the application through this link : https://personal-expense-tracker-mhdi.onrender.com
 
 ### Getting Started
 
@@ -254,13 +245,6 @@ The application is deployed on Render. Both frontend and backend services are co
 - Loan Analysis: Detailed loan information including disbursements over time
 - Category Analysis: Top spending categories and income sources
 
-## API Documentation
-
-Once the backend is running, access the interactive API documentation:
-
-- **Swagger UI**: `http://localhost:8000/docs` (development) or `https://your-backend-url.onrender.com/docs` (production)
-- **ReDoc**: `http://localhost:8000/redoc` (development) or `https://your-backend-url.onrender.com/redoc` (production)
-
 ## Development
 
 ### Backend Development
@@ -286,35 +270,6 @@ The frontend leverages Next.js 15 features:
 - OpenAPI Documentation auto-generated
 - Consistent error handling
 - Request/response validation with Pydantic
-
-## Troubleshooting
-
-### Common Issues
-
-**Database Connection Errors**
-- Verify your Supabase credentials in `.env` file
-- Check if your IP is whitelisted in Supabase
-- Ensure the database is running
-
-**Frontend Build Issues**
-- Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
-- Check Node.js version compatibility (requires 18+)
-- Verify environment variables are set correctly
-
-**Authentication Problems**
-- Confirm Supabase project settings
-- Check redirect URLs configuration in Supabase dashboard
-- Verify email templates setup
-
-**AI Assistant Not Working**
-- Verify `GROQ_API_KEY` is set in backend environment variables
-- Check backend logs for API key loading messages
-- Ensure Groq API key is valid and has credits
-
-**CORS Errors**
-- Verify backend CORS configuration includes your frontend domain
-- Check that `NEXT_PUBLIC_API_URL` is set correctly in frontend
-- Ensure backend is running and accessible
 
 
 ## Acknowledgments
