@@ -17,34 +17,25 @@ env_paths = [
     Path.cwd() / "backend" / ".env",  # backend/.env from project root
 ]
 
-logger.info(f"Looking for .env file. Current working directory: {Path.cwd()}")
-logger.info(f"main.py location: {Path(__file__).parent}")
+# Only log .env loading in development (when RENDER env var is not set)
+is_production = os.getenv("RENDER") is not None
+
+if not is_production:
+    logger.info(f"Looking for .env file. Current working directory: {Path.cwd()}")
 
 loaded = False
 for env_path in env_paths:
     exists = env_path.exists()
-    logger.info(f"Checking: {env_path} (exists: {exists})")
     if exists:
         load_dotenv(dotenv_path=env_path, override=True)
-        logger.info(f"Loaded .env from: {env_path}")
-        # Verify GROQ_API_KEY was loaded
-        groq_key = os.getenv("GROQ_API_KEY")
-        if groq_key:
-            logger.info(f"GROQ_API_KEY loaded successfully (length: {len(groq_key)})")
-        else:
-            logger.warning(f"GROQ_API_KEY not found in .env file at {env_path}")
+        if not is_production:
+            logger.info(f"Loaded .env from: {env_path}")
         loaded = True
         break
 
 if not loaded:
     # Fallback to default load_dotenv behavior
-    logger.warning("No .env file found in expected locations, trying default load_dotenv()")
     load_dotenv(override=True)
-    groq_key = os.getenv("GROQ_API_KEY")
-    if groq_key:
-        logger.info(f"GROQ_API_KEY loaded from default location (length: {len(groq_key)})")
-    else:
-        logger.error("GROQ_API_KEY still not found after default load_dotenv()")
 
 # Import routes AFTER loading environment variables
 from routes import users, accounts, expenses, budgets, loans, loan_disbursements, income, debts, people, tags, assistant
@@ -69,11 +60,9 @@ app.add_middleware(
 async def startup_event():
     logger.info("Starting Expense Tracker API")
     logger.info("CORS configured for Vercel and Render domains")
-    # Check if GROQ_API_KEY is loaded
+    # Check if GROQ_API_KEY is loaded (only log in production if missing)
     groq_key = os.getenv("GROQ_API_KEY")
-    if groq_key:
-        logger.info(f"GROQ_API_KEY is loaded (length: {len(groq_key)})")
-    else:
+    if not groq_key:
         logger.warning("GROQ_API_KEY is NOT loaded - AI assistant will not work")
 
 # Include routers
@@ -96,29 +85,3 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
-
-@app.get("/cors-debug")
-async def cors_debug():
-    """Debug endpoint to check CORS configuration"""
-    from fastapi import Request
-    return {
-        "message": "CORS Debug Info",
-        "cors_origins": [
-            "http://localhost:3000",
-            "https://la-living-frontend.vercel.app",
-            "https://la-living-frontend-git-frontend-ve-b04208-dhruv-sandus-projects.vercel.app",
-            "https://*.vercel.app",
-            "https://*.onrender.com"
-        ],
-        "note": "Check Render logs to see if CORS origins are being logged on startup"
-    }
-
-@app.get("/test")
-async def test_endpoint():
-    """Simple test endpoint to verify connectivity"""
-    return {
-        "message": "Backend is working!",
-        "timestamp": "2025-08-30T17:30:00Z",
-        "status": "healthy",
-        "cors_working": True
-    } 

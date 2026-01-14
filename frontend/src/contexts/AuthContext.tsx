@@ -39,9 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          console.log('User profile not found - this is normal for new accounts');
-        } else {
+        if (error.code !== 'PGRST116') {
           console.error('Error fetching user profile:', error);
         }
         return null;
@@ -67,13 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthUser(authUser);
       
       // Fetch user profile from custom users table
-      console.log('RefreshUser: Fetching profile for user:', authUser.id);
       const userProfile = await fetchUserProfile(authUser.id);
       if (userProfile) {
-        console.log('RefreshUser: Profile fetched successfully:', userProfile.name);
         setUser(userProfile);
-      } else {
-        console.log('RefreshUser: No profile found for user:', authUser.id);
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
@@ -86,27 +80,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        console.log('AuthContext: Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('AuthContext: Error getting session:', error);
         }
-
-        console.log('AuthContext: Session data:', session);
         
         if (session?.user) {
-          console.log('AuthContext: User found in session:', session.user.id);
           setAuthUser(session.user);
           const userProfile = await fetchUserProfile(session.user.id);
           if (userProfile) {
-            console.log('AuthContext: User profile fetched:', userProfile.name);
             setUser(userProfile);
-          } else {
-            console.log('AuthContext: Failed to fetch user profile');
           }
-        } else {
-          console.log('AuthContext: No session found');
         }
       } catch (error) {
         console.error('AuthContext: Exception getting initial session:', error);
@@ -146,7 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('SignIn: Starting sign in process...');
       const { data, error } = await authHelpers.signInWithEmail(email, password);
       
       if (error) {
@@ -155,11 +139,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        console.log('SignIn: Sign in successful, fetching user profile...');
         setAuthUser(data.user);
         const userProfile = await fetchUserProfile(data.user.id);
         if (userProfile) {
-          console.log('SignIn: User profile fetched successfully:', userProfile.name);
           setUser(userProfile);
         } else {
           console.error('SignIn: Failed to fetch user profile');
@@ -175,15 +157,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata: { name: string; username: string }) => {
     try {
-      console.log('SignUp: Starting sign up process...');
       const { data, error } = await authHelpers.signUp(email, password, metadata);
       
       if (error) {
         console.error('SignUp: Error during sign up:', error);
         return { error };
       }
-
-      console.log('SignUp: Account created successfully');
       
       return { error: null };
     } catch (error) {
@@ -195,16 +174,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     // Prevent multiple simultaneous sign out attempts
     if (isSigningOut) {
-      console.log('SignOut: Already signing out, ignoring request');
       return;
     }
 
     try {
       setIsSigningOut(true);
-      console.log('SignOut: Starting sign out process...');
-      
       const result = await authHelpers.signOut();
-      console.log('SignOut: authHelpers.signOut result:', result);
       
       if (result.error) {
         console.error('SignOut: Error from authHelpers:', result.error);
@@ -212,10 +187,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      console.log('SignOut: Successfully signed out from Supabase');
       setAuthUser(null);
       setUser(null);
-      console.log('SignOut: Local state cleared, user should be null now');
     } catch (error) {
       console.error('SignOut: Exception during sign out:', error);
       setIsSigningOut(false);

@@ -84,21 +84,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const handleLogout = async () => {
     // Prevent multiple rapid clicks
     if (isLoggingOut) {
-      console.log('Layout: Logout already in progress, ignoring click');
       return;
     }
 
-    console.log('Layout: Logout button clicked, starting logout process...');
     setIsLoggingOut(true);
     
     try {
       await signOut();
-      console.log('Layout: signOut completed, waiting for state to clear...');
       
       // Small delay to ensure auth state is properly cleared
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('Layout: Redirecting to landing page...');
       router.push('/landing');
     } catch (error) {
       console.error('Layout: Error during logout:', error);
