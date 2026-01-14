@@ -2,22 +2,14 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Always log API URL to help with debugging (even in production)
-if (typeof window !== 'undefined') {
-  console.log('🔗 API Base URL:', API_BASE_URL);
-  console.log('🌍 Environment:', process.env.NODE_ENV);
-  console.log('📦 NEXT_PUBLIC_API_URL from env:', process.env.NEXT_PUBLIC_API_URL);
-  
-  // Warn if using localhost in production
-  if (API_BASE_URL.includes('localhost') && process.env.NODE_ENV === 'production') {
-    console.error('⚠️ CRITICAL: API URL is set to localhost in production!');
-    console.error('⚠️ Please set NEXT_PUBLIC_API_URL in Vercel environment variables and redeploy.');
-  }
-  
-  // Warn if API URL is not set
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    console.error('⚠️ WARNING: NEXT_PUBLIC_API_URL is not set! Using default localhost.');
-  }
+// Log API URL in development to help with debugging
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('API Base URL:', API_BASE_URL);
+}
+
+// Warn if using localhost in production
+if (typeof window !== 'undefined' && API_BASE_URL.includes('localhost') && process.env.NODE_ENV === 'production') {
+  console.error('⚠️ WARNING: API URL is set to localhost in production! Set NEXT_PUBLIC_API_URL in Vercel environment variables.');
 }
 
 const api = axios.create({
@@ -31,32 +23,10 @@ const api = axios.create({
 // Add request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
-    console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
-    console.log('📤 Full URL:', config.baseURL + config.url);
     return config;
   },
   (error) => {
-    console.error('❌ API: Request error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor for debugging
-api.interceptors.response.use(
-  (response) => {
-    console.log('✅ API Response:', response.status, response.config.url);
-    return response;
-  },
-  (error) => {
-    console.error('❌ API Error:', {
-      message: error.message,
-      url: error.config?.url,
-      baseURL: error.config?.baseURL,
-      fullURL: error.config?.baseURL + error.config?.url,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-    });
+    console.error('API: Request error:', error);
     return Promise.reject(error);
   }
 );

@@ -29,7 +29,7 @@ A comprehensive personal finance management application built with modern web te
 
 ## 🚀 Live Demo
 
-- **Frontend**: Deployed on Vercel (Coming Soon)
+- **Frontend**: Deployed on Render (Coming Soon)
 - **Backend API**: Deployed on Render (Coming Soon)
 - **API Documentation**: Available at `/docs` endpoint when backend is running
 
@@ -55,7 +55,7 @@ A comprehensive personal finance management application built with modern web te
 ### Infrastructure
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth
-- **Deployment**: Vercel (Frontend) + Render (Backend)
+- **Deployment**: Render (Frontend + Backend)
 - **AI Service**: Groq
 
 ## 📁 Project Structure
@@ -200,7 +200,11 @@ The frontend will be available at `http://localhost:3000`
 
 ## 🚀 Deployment
 
-### Backend Deployment (Render)
+### Deploy Both Services on Render
+
+Both frontend and backend are deployed on Render for unified hosting.
+
+#### Option 1: Using Render Blueprint (Recommended)
 
 1. **Push to GitHub**:
    ```bash
@@ -209,55 +213,75 @@ The frontend will be available at `http://localhost:3000`
    git push origin main
    ```
 
-2. **Deploy to Render**:
+2. **Deploy via Render Blueprint**:
    - Go to [render.com](https://render.com)
-   - Click "New +" → "Web Service"
+   - Click "New +" → "Blueprint"
    - Connect your GitHub repository: `dhruv0324/LA-living`
-   - Configure:
-     - **Name:** `expense-tracker-backend`
-     - **Root Directory:** `backend`
-     - **Environment:** `Python 3`
-     - **Build Command:** `pip install -r requirements.txt`
-     - **Start Command:** `python start.py`
-     - **Branch:** `main`
-   - Add Environment Variables:
-     - `SUPABASE_URL` = (your Supabase URL)
-     - `SUPABASE_ANON_KEY` = (your Supabase anon key)
-     - `GROQ_API_KEY` = (your Groq API key)
-     - `PORT` = `8000` (optional, Render sets this automatically)
-   - Select **Free** tier
-   - Click "Create Web Service"
-   - Wait for deployment (5-10 minutes)
-   - Copy your service URL (e.g., `https://expense-tracker-backend.onrender.com`)
+   - Render will automatically detect the `render.yaml` file
+   - Review the configuration and click "Apply"
+   - Both services will be created automatically
 
-### Frontend Deployment (Vercel)
+3. **Set Environment Variables**:
+   
+   **For Backend Service (`expense-tracker-backend`):**
+   - `SUPABASE_URL` = (your Supabase URL)
+   - `SUPABASE_ANON_KEY` = (your Supabase anon key)
+   - `GROQ_API_KEY` = (your Groq API key)
+   - `PORT` = `8000` (optional, Render sets this automatically)
+   
+   **For Frontend Service (`expense-tracker-frontend`):**
+   - `NEXT_PUBLIC_API_URL` = `https://expense-tracker-backend.onrender.com` (use your actual backend URL)
+   - `NEXT_PUBLIC_SUPABASE_URL` = (your Supabase URL)
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = (your Supabase anon key)
+   - `NODE_ENV` = `production` (already set in render.yaml)
+   - `PORT` = `3000` (optional, Render sets this automatically)
 
-1. **Deploy Backend First**: Make sure your backend is deployed and running on Render
+4. **Wait for Deployment**: Both services will deploy (5-10 minutes each)
 
-2. **Deploy to Vercel**:
-   - Go to [vercel.com](https://vercel.com)
-   - Click "Add New..." → "Project"
-   - Import repository: `dhruv0324/LA-living`
-   - Configure:
-     - **Framework Preset:** Next.js (auto-detected)
-     - **Root Directory:** `frontend`
-     - **Build Command:** `npm run build` (default)
-     - **Output Directory:** `.next` (default)
-     - **Branch:** `main`
-   - Add Environment Variables:
-     - `NEXT_PUBLIC_API_URL` = `https://your-backend-url.onrender.com` (use your actual Render URL)
-     - `NEXT_PUBLIC_SUPABASE_URL` = (your Supabase URL)
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = (your Supabase anon key)
-   - Click "Deploy"
-   - Wait for deployment (2-5 minutes)
-   - Your app will be live at `https://your-project.vercel.app`
+#### Option 2: Manual Deployment
+
+**Backend Deployment:**
+
+1. Go to [render.com](https://render.com)
+2. Click "New +" → "Web Service"
+3. Connect your GitHub repository: `dhruv0324/LA-living`
+4. Configure:
+   - **Name:** `expense-tracker-backend`
+   - **Root Directory:** `backend`
+   - **Environment:** `Python 3`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `python start.py`
+   - **Branch:** `main`
+5. Add Environment Variables (see above)
+6. Select **Free** tier
+7. Click "Create Web Service"
+
+**Frontend Deployment:**
+
+1. **Deploy Backend First**: Make sure your backend is deployed and running
+2. Go to [render.com](https://render.com)
+3. Click "New +" → "Web Service"
+4. Connect your GitHub repository: `dhruv0324/LA-living`
+5. Configure:
+   - **Name:** `expense-tracker-frontend`
+   - **Root Directory:** `frontend`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+   - **Branch:** `main`
+6. Add Environment Variables (see above, use your backend URL for `NEXT_PUBLIC_API_URL`)
+7. Select **Free** tier
+8. Click "Create Web Service"
 
 ### Important Deployment Notes
 
 - **Render Free Tier**: Services spin down after 15 minutes of inactivity. First request after spin-down may take 30-60 seconds.
-- **Environment Variables**: Never commit `.env` files. Always set them in deployment dashboards.
-- **CORS**: Already configured in `backend/main.py` for `*.vercel.app` domains.
-- **Auto-deploy**: Both services will auto-deploy on push to `main` branch.
+- **Environment Variables**: Never commit `.env` files. Always set them in Render dashboard.
+- **CORS**: Already configured in `backend/main.py` for `*.onrender.com` domains.
+- **Auto-deploy**: Both services will auto-deploy on push to `main` branch when connected to GitHub.
+- **Service URLs**: Your services will be available at:
+  - Backend: `https://expense-tracker-backend.onrender.com`
+  - Frontend: `https://expense-tracker-frontend.onrender.com`
 
 ## 📖 Usage Guide
 

@@ -42,13 +42,12 @@ from routes import users, accounts, expenses, budgets, loans, loan_disbursements
 
 app = FastAPI(title="Expense Tracker API", version="1.0.0")
 
-# CORS middleware - Allow all Vercel domains for production flexibility
+# CORS middleware - Allow Render and localhost for development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        "https://*.vercel.app",   # All Vercel domains (preview + production)
-        "https://*.onrender.com", # All Render domains (if needed)
+        "https://*.onrender.com", # All Render domains (frontend + backend)
     ],
     allow_credentials=True,
     allow_methods=["*"],
