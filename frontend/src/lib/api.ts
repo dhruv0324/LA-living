@@ -2,14 +2,22 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Log API URL in development to help with debugging
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  console.log('API Base URL:', API_BASE_URL);
-}
-
-// Warn if using localhost in production
-if (typeof window !== 'undefined' && API_BASE_URL.includes('localhost') && process.env.NODE_ENV === 'production') {
-  console.error('⚠️ WARNING: API URL is set to localhost in production! Set NEXT_PUBLIC_API_URL in Vercel environment variables.');
+// Log API URL to help with debugging (both dev and prod)
+if (typeof window !== 'undefined') {
+  console.log('🔗 API Base URL:', API_BASE_URL);
+  console.log('🌍 Environment:', process.env.NODE_ENV);
+  console.log('📦 NEXT_PUBLIC_API_URL from env:', process.env.NEXT_PUBLIC_API_URL);
+  
+  // Warn if using localhost in production
+  if (API_BASE_URL.includes('localhost') && process.env.NODE_ENV === 'production') {
+    console.error('⚠️ CRITICAL: API URL is set to localhost in production!');
+    console.error('⚠️ Please set NEXT_PUBLIC_API_URL in Render environment variables.');
+  }
+  
+  // Warn if API URL is not set
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    console.error('⚠️ WARNING: NEXT_PUBLIC_API_URL is not set! Using default localhost.');
+  }
 }
 
 const api = axios.create({
@@ -37,8 +45,22 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('API: Response error from:', error.config?.url);
-    console.error('API: Error details:', error.response?.data || error.message);
+    // Enhanced error logging for production debugging
+    if (error.response) {
+      // Server responded with error status
+      console.error('API: Response error from:', error.config?.url);
+      console.error('API: Status:', error.response.status);
+      console.error('API: Error data:', error.response.data);
+      console.error('API: Headers:', error.response.headers);
+    } else if (error.request) {
+      // Request was made but no response received
+      console.error('API: No response received from:', error.config?.url);
+      console.error('API: Request config:', error.config);
+      console.error('API: This might be a CORS issue or network problem');
+    } else {
+      // Something else happened
+      console.error('API: Error setting up request:', error.message);
+    }
     return Promise.reject(error);
   }
 );

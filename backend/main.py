@@ -43,12 +43,14 @@ from routes import users, accounts, expenses, budgets, loans, loan_disbursements
 app = FastAPI(title="Expense Tracker API", version="1.0.0")
 
 # CORS middleware - Allow Render and localhost for development
+# Note: FastAPI doesn't support wildcards in allow_origins, so we use allow_origin_regex
+import re
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        "https://*.onrender.com", # All Render domains (frontend + backend)
     ],
+    allow_origin_regex=r"https://.*\.onrender\.com",  # All Render domains (frontend + backend)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

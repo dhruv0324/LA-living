@@ -225,20 +225,21 @@ const Dashboard = () => {
       const loansResponse = results[4].status === 'fulfilled' ? results[4].value : { data: [] };
       const debtsResponse = results[5].status === 'fulfilled' ? results[5].value : { data: [] };
 
-      // Handle any failures gracefully
+      // Log any failures for debugging
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const apiNames = ['accounts', 'expenses', 'income', 'budget', 'loans', 'debts'];
-          // Silently handle failures - user will see empty data instead of errors
+          const names = ['accounts', 'expenses', 'income', 'budgets', 'loans', 'debts'];
+          console.error(`Failed to load ${names[index]}:`, result.reason);
         }
       });
 
-      const accountsData = accountsResponse.data;
-      const expensesData = expensesResponse.data;
-      const incomeData = incomeResponse.data;
+      // Ensure data is always an array
+      const accountsData = Array.isArray(accountsResponse.data) ? accountsResponse.data : [];
+      const expensesData = Array.isArray(expensesResponse.data) ? expensesResponse.data : [];
+      const incomeData = Array.isArray(incomeResponse.data) ? incomeResponse.data : [];
       const budgetData = budgetResponse.data;
-      const loansData = loansResponse.data;
-      const debtsData = debtsResponse.data;
+      const loansData = Array.isArray(loansResponse.data) ? loansResponse.data : [];
+      const debtsData = Array.isArray(debtsResponse.data) ? debtsResponse.data : [];
 
       setAccounts(accountsData);
       setLoans(loansData);

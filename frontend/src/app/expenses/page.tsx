@@ -220,18 +220,24 @@ const ExpensesPage = () => {
 
       const response = await expenseApi.getAll(params);
       
-      // Handle both old and new response formats
-      if (response.data && typeof response.data === 'object' && 'data' in response.data) {
-        // New format with pagination info
-        setExpenses(response.data.data);
-        setTotalCount(response.data.total);
-      } else {
-        // Old format - direct array
+      // Backend returns array directly, Axios wraps it in response.data
+      if (Array.isArray(response.data)) {
         setExpenses(response.data);
         setTotalCount(response.data.length);
+      } else if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        // Fallback: if backend returns paginated format
+        setExpenses(response.data.data);
+        setTotalCount(response.data.total || response.data.data?.length || 0);
+      } else {
+        // Empty or unexpected format
+        console.warn('Unexpected response format:', response.data);
+        setExpenses([]);
+        setTotalCount(0);
       }
-    } catch (error) {
-      showNotification('Failed to load expenses', 'error');
+    } catch (error: any) {
+      console.error('Failed to load expenses:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      showNotification(`Failed to load expenses: ${error.response?.data?.detail || error.message}`, 'error');
     } finally {
       setLoading(false);
     }
