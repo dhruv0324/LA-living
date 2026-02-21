@@ -195,6 +195,7 @@ const ExpensesPage = () => {
   // Load data on component mount and when month/user changes
   useEffect(() => {
     if (user?.id) {
+      setPage(0); // reset to first page when month changes
       loadExpenses();
       loadAccounts();
       loadBudgetSummary();
@@ -206,14 +207,14 @@ const ExpensesPage = () => {
     
     setLoading(true);
     try {
-      // Filter by selected month/year only
+      // Fetch all expenses for the selected month at once; pagination is handled client-side
       const monthStart = startOfMonth(selectedMonth);
       const monthEnd = endOfMonth(selectedMonth);
       
       const params: any = {
         user_id: user.id,
-        skip: page * rowsPerPage,
-        limit: rowsPerPage,
+        skip: 0,
+        limit: 1000,
         start_date: format(monthStart, 'yyyy-MM-dd'),
         end_date: format(monthEnd, 'yyyy-MM-dd'),
       };
@@ -698,6 +699,7 @@ const ExpensesPage = () => {
                     ) : (
                       expenses
                         .sort((a, b) => parseISO(b.expense_date || '1970-01-01').getTime() - parseISO(a.expense_date || '1970-01-01').getTime())
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                         .map((expense) => (
                           <TableRow key={expense.expense_id}>
                             <TableCell>
